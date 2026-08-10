@@ -1,5 +1,5 @@
 import React from "react";
-import { Text, View, StyleSheet } from "@react-pdf/renderer";
+import { Text, View, StyleSheet, Image } from "@react-pdf/renderer";
 import { PdfLayout } from "./PdfLayout";
 
 const styles = StyleSheet.create({
@@ -38,9 +38,6 @@ const styles = StyleSheet.create({
     width: "50%",
     paddingRight: 6,
   },
-  col1: {
-    width: "100%",
-  },
   label: {
     fontSize: 7,
     color: "#64748B",
@@ -63,7 +60,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   notesBox: {
-    minHeight: 70,
+    minHeight: 50,
     borderWidth: 1,
     borderColor: "#CBD5E1",
     borderStyle: "dashed",
@@ -71,27 +68,44 @@ const styles = StyleSheet.create({
     padding: 8,
     marginTop: 5,
   },
+  // 🟢 Estilos para el bloque de Firmas Alinear a la par
   signatureContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 40,
-    paddingHorizontal: 30,
+    alignItems: "flex-end",
+    marginTop: 25,
+    paddingHorizontal: 20,
   },
   signatureBox: {
-    width: "40%",
+    width: "45%",
+    alignItems: "center",
     borderTopWidth: 1,
     borderTopColor: "#94A3B8",
-    alignItems: "center",
-    paddingTop: 4,
+    paddingTop: 6,
+    position: "relative",
   },
-  signatureText: {
+  signatureImage: {
+    height: 45,
+    width: 130,
+    objectFit: "contain",
+    marginBottom: 4,
+  },
+  stampImage: {
+    height: 55,
+    width: 110,
+    objectFit: "contain",
+    marginBottom: 2,
+  },
+  signatoryTitle: {
     fontSize: 8,
-    color: "#475569",
     fontWeight: "bold",
+    color: "#0F172A",
+    textAlign: "center",
   },
-  signatureSub: {
+  signatorySub: {
     fontSize: 7,
-    color: "#94A3B8",
+    color: "#64748B",
+    textAlign: "center",
   },
 });
 
@@ -108,6 +122,8 @@ interface PatientPdfProps {
     status: string;
     isMinor: boolean;
     observations?: string;
+    consentSignature?: string; // 🟢 Firma digital si está registrada
+    consentDate?: string;
     tutor?: {
       name: string;
       relationship: string;
@@ -117,126 +133,167 @@ interface PatientPdfProps {
   };
 }
 
-export const PatientPdfDocument = ({ patient }: PatientPdfProps) => (
-  <PdfLayout
-    title="Ficha de Identificación del Paciente"
-    subtitle="INTEGRAL SENSUNTEPEQUE"
-    showStamp={false}
-  >
-    {/* 📋 Bloque 1: Datos Personales Principales (3 Columnas) */}
-    <View style={styles.cardSection}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>1. Información Personal</Text>
-      </View>
+export const PatientPdfDocument = ({ patient }: PatientPdfProps) => {
+  const isMinor = Boolean(patient.isMinor && patient.tutor);
+  const signerName = isMinor ? patient.tutor?.name : patient.name;
+  const signerDui = isMinor ? patient.tutor?.dui : patient.dui || "N/A";
 
-      <View style={styles.grid4}>
-        <View style={styles.col2}>
-          <Text style={styles.label}>Nombre Completo</Text>
-          <Text style={styles.value}>{patient.name}</Text>
-        </View>
+  // 🌐 Carga del sello
+  const stampUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/sello.png`
+      : "/sello.png";
 
-        <View style={styles.col3}>
-          <Text style={styles.label}>Género</Text>
-          <Text style={styles.value}>{patient.gender}</Text>
-        </View>
-
-        <View style={styles.col3}>
-          <Text style={styles.label}>Fecha de Nacimiento</Text>
-          <Text style={styles.value}>{patient.birthDate || "—"}</Text>
-        </View>
-
-        <View style={styles.col3}>
-          <Text style={styles.label}>Edad Calculada</Text>
-          <Text style={styles.value}>{patient.age} años</Text>
-        </View>
-
-        <View style={styles.col3}>
-          <Text style={styles.label}>DUI / Documento</Text>
-          <Text style={styles.value}>
-            {patient.dui || "N/A (Menor de edad)"}
-          </Text>
-        </View>
-
-        <View style={styles.col3}>
-          <Text style={styles.label}>Estado del Paciente</Text>
-          <Text style={styles.statusBadge}>{patient.status}</Text>
-        </View>
-      </View>
-    </View>
-    {/* 📞 Bloque 2: Información de Contacto */}
-    <View style={styles.cardSection}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>2. Datos de Contacto</Text>
-      </View>
-
-      <View style={styles.grid4}>
-        <View style={styles.col2}>
-          <Text style={styles.label}>Teléfono Principal</Text>
-          <Text style={styles.value}>{patient.phone}</Text>
-        </View>
-
-        <View style={styles.col2}>
-          <Text style={styles.label}>Correo Electrónico</Text>
-          <Text style={styles.value}>{patient.email || "No registrado"}</Text>
-        </View>
-      </View>
-    </View>
-    {/* 🛡️ Bloque 3: Datos de Tutor (Si aplica) */}
-    {patient.isMinor && patient.tutor && (
+  return (
+    <PdfLayout
+      title="Ficha de Identificación del Paciente"
+      subtitle="INTEGRAL SENSUNTEPEQUE"
+      showStamp={false} // Desactivamos el sello aislado del layout para usar el bloque dual
+    >
+      {/* 📋 Bloque 1: Datos Personales */}
       <View style={styles.cardSection}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>3. Responsable Legal / Tutor</Text>
+          <Text style={styles.sectionTitle}>1. Información Personal</Text>
         </View>
 
         <View style={styles.grid4}>
           <View style={styles.col2}>
-            <Text style={styles.label}>Nombre del Responsable</Text>
-            <Text style={styles.value}>{patient.tutor.name}</Text>
+            <Text style={styles.label}>Nombre Completo</Text>
+            <Text style={styles.value}>{patient.name}</Text>
           </View>
 
           <View style={styles.col3}>
-            <Text style={styles.label}>Parentesco</Text>
-            <Text style={styles.value}>{patient.tutor.relationship}</Text>
+            <Text style={styles.label}>Género</Text>
+            <Text style={styles.value}>{patient.gender}</Text>
           </View>
 
           <View style={styles.col3}>
-            <Text style={styles.label}>DUI Tutor</Text>
-            <Text style={styles.value}>{patient.tutor.dui}</Text>
+            <Text style={styles.label}>Fecha de Nacimiento</Text>
+            <Text style={styles.value}>{patient.birthDate || "—"}</Text>
           </View>
 
           <View style={styles.col3}>
-            <Text style={styles.label}>Teléfono Tutor</Text>
-            <Text style={styles.value}>{patient.tutor.phone}</Text>
+            <Text style={styles.label}>Edad Calculada</Text>
+            <Text style={styles.value}>{patient.age} años</Text>
+          </View>
+
+          <View style={styles.col3}>
+            <Text style={styles.label}>DUI / Documento</Text>
+            <Text style={styles.value}>
+              {patient.dui || "N/A (Menor de edad)"}
+            </Text>
+          </View>
+
+          <View style={styles.col3}>
+            <Text style={styles.label}>Estado del Paciente</Text>
+            <Text style={styles.statusBadge}>{patient.status}</Text>
           </View>
         </View>
       </View>
-    )}
-    {/* 📝 Bloque 4: Notas / Observaciones Iniciales (Rellena espacio útil) */}
-    // Dentro de PatientPdfDocument.tsx:
-    <View style={styles.cardSection}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>
-          4. Observaciones Médicas / Recepción
-        </Text>
+
+      {/* 📞 Bloque 2: Información de Contacto */}
+      <View style={styles.cardSection}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>2. Datos de Contacto</Text>
+        </View>
+
+        <View style={styles.grid4}>
+          <View style={styles.col2}>
+            <Text style={styles.label}>Teléfono Principal</Text>
+            <Text style={styles.value}>{patient.phone}</Text>
+          </View>
+
+          <View style={styles.col2}>
+            <Text style={styles.label}>Correo Electrónico</Text>
+            <Text style={styles.value}>{patient.email || "No registrado"}</Text>
+          </View>
+        </View>
       </View>
-      <View style={styles.notesBox}>
-        <Text
-          style={{
-            fontSize: 8,
-            color: patient.observations ? "#0F172A" : "#94A3B8",
-          }}
-        >
-          {patient.observations ||
-            "[ Sin observaciones adicionales registradas ]"}
-        </Text>
+
+      {/* 🛡️ Bloque 3: Datos de Tutor (Si aplica) */}
+      {patient.isMinor && patient.tutor && (
+        <View style={styles.cardSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>3. Responsable Legal / Tutor</Text>
+          </View>
+
+          <View style={styles.grid4}>
+            <View style={styles.col2}>
+              <Text style={styles.label}>Nombre del Responsable</Text>
+              <Text style={styles.value}>{patient.tutor.name}</Text>
+            </View>
+
+            <View style={styles.col3}>
+              <Text style={styles.label}>Parentesco</Text>
+              <Text style={styles.value}>{patient.tutor.relationship}</Text>
+            </View>
+
+            <View style={styles.col3}>
+              <Text style={styles.label}>DUI Tutor</Text>
+              <Text style={styles.value}>{patient.tutor.dui}</Text>
+            </View>
+
+            <View style={styles.col3}>
+              <Text style={styles.label}>Teléfono Tutor</Text>
+              <Text style={styles.value}>{patient.tutor.phone}</Text>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* 📝 Bloque 4: Notas / Observaciones */}
+      <View style={styles.cardSection}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            {patient.isMinor && patient.tutor
+              ? "4. Observaciones Médicas / Recepción"
+              : "3. Observaciones Médicas / Recepción"}
+          </Text>
+        </View>
+        <View style={styles.notesBox}>
+          <Text
+            style={{
+              fontSize: 8,
+              color: patient.observations ? "#0F172A" : "#94A3B8",
+            }}
+          >
+            {patient.observations ||
+              "[ Sin observaciones adicionales registradas ]"}
+          </Text>
+        </View>
       </View>
-    </View>
-    {/* ✍️ Firmas al Pie */}
-    <View style={styles.signatureContainer}>
-      <View style={styles.signatureBox}>
-        <Text style={styles.signatureText}>Firma del Encargado / Paciente</Text>
-        <Text style={styles.signatureSub}>Conformidad de Datos</Text>
+
+      {/* ✍️ BLOQUE DE FIRMAS Y SELLO (Alineados a la par) */}
+      <View style={styles.signatureContainer}>
+        {/* Firma Paciente / Tutor */}
+        <View style={styles.signatureBox}>
+          {patient.consentSignature ? (
+            <Image
+              src={patient.consentSignature}
+              style={styles.signatureImage}
+            />
+          ) : (
+            <View style={{ height: 45 }} />
+          )}
+          <Text style={styles.signatoryTitle}>{signerName}</Text>
+          <Text style={styles.signatorySub}>
+            Firma de {isMinor ? "Tutor Responsable" : "Paciente"}
+          </Text>
+          <Text style={styles.signatorySub}>DUI: {signerDui}</Text>
+        </View>
+
+        {/* Firma y Sello Institucional */}
+        <View style={styles.signatureBox}>
+          <Image src={stampUrl} style={styles.stampImage} />
+          <Text style={styles.signatoryTitle}>Centro Psicológico Integral</Text>
+          <Text style={styles.signatorySub}>
+            Recepción / Profesional Autorizado
+          </Text>
+          <Text style={styles.signatorySub}>
+            Sello e Identificación Institucional
+          </Text>
+        </View>
       </View>
-    </View>
-  </PdfLayout>
-);
+    </PdfLayout>
+  );
+};

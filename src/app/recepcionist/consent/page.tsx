@@ -222,7 +222,7 @@ export default function ConsentsPage() {
             {/* 📥 DESCARGAR CONSENTIMIENTO SI YA FUE FIRMADO */}
             {isSigned && (
               <ActionButton
-                icon={<Download className="w-4 h-4" />}
+                icon={<FileSignature className="w-4 h-4 text-blue-500" />}
                 title="Descargar Consentimiento PDF"
                 variant="primary"
                 onClick={() => handleDownloadConsentPdf(patient)}
