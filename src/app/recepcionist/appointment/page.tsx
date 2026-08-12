@@ -6,47 +6,33 @@ import {
   User,
   Eye,
   Plus,
-  Calendar,
+  Calendar as CalendarIcon,
   Clock,
   Loader2,
   CheckCircle2,
   Clock3,
   XCircle,
-  Trash2,
-  FileText,
   CalendarDays,
   Pencil,
-  Trash,
+  Trash2,
   Mail,
+  List,
 } from "lucide-react";
 
 import { ActionButton } from "@/components/ui/ActionButton";
 import { Select } from "@/components/ui/Select";
 import { ModalSheet as Modal } from "@/components/ui/Modal";
 import { Table, Column } from "@/components/ui/Table";
+import { AppointmentCalendar } from "@/components/ui/Calendar";
 import { showAlert } from "@/lib/sweetalert";
 
-// --- TIPOS DE DATOS ---
-export type TherapyType =
-  | "Terapia Individual"
-  | "Terapia de Pareja"
-  | "Terapia Familiar"
-  | "Terapia en Línea"
-  | "Orientación Vocacional"
-  | "Terapia de Grupo";
-
-export type AppointmentStatus = "Programada" | "Completada" | "Cancelada";
-
-export interface Appointment {
-  id: string;
-  patientIds: string[]; // Múltiples pacientes si aplica
-  patientNames: string[];
-  therapyType: TherapyType;
-  date: string;
-  time: string;
-  status: AppointmentStatus;
-  notes?: string;
-}
+import {
+  AppointmentService,
+  Appointment,
+  TherapyType,
+  AppointmentStatus,
+} from "@/services/appointment.service";
+import { PatientService, Patient } from "@/services/patient.service";
 
 const THERAPY_OPTIONS: TherapyType[] = [
   "Terapia Individual",
@@ -69,118 +55,177 @@ const STATUS_OPTIONS: AppointmentStatus[] = [
   "Cancelada",
 ];
 
-// PACIENTES MOCK
-const MOCK_PATIENTS = [
-  { id: "1", name: "Carlos Eduardo Mendoza" },
-  { id: "2", name: "María José Ramos" },
-  { id: "3", name: "Andrea Beatriz Gómez" },
-  { id: "4", name: "Roberto Carlos Flores" },
-  { id: "5", name: "Lucía Fernanda Martínez" },
-];
-
-// CITAS DUMMY DE PRUEBA
-const INITIAL_APPOINTMENTS: Appointment[] = [
-  {
-    id: "1",
-    patientIds: ["1"],
-    patientNames: ["Carlos Eduardo Mendoza"],
-    therapyType: "Terapia Individual",
-    date: new Date().toISOString().split("T")[0],
-    time: "09:00",
-    status: "Programada",
-    notes: "Primera sesión de evaluación.",
-  },
-  {
-    id: "2",
-    patientIds: ["2", "4"],
-    patientNames: ["María José Ramos", "Roberto Carlos Flores"],
-    therapyType: "Terapia de Pareja",
-    date: new Date().toISOString().split("T")[0],
-    time: "14:30",
-    status: "Completada",
-    notes: "Sesión de seguimiento.",
-  },
-];
-
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [patientsList, setPatientsList] = useState<Patient[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("Todos");
   const [isPageLoading, setIsPageLoading] = useState(true);
 
-  // Fecha actual formateada (YYYY-MM-DD) para restricción
-  const todayDate = new Date().toISOString().split("T")[0];
+  // Modo de vista
+  const [viewMode, setViewMode] = useState<"table" | "calendar">("table");
 
   // Modales
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Cita Seleccionada y Estado del Formulario
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  
-  // Lista de IDs de pacientes seleccionados (por defecto 1 paciente)
-  const [selectedPatientIds, setSelectedPatientIds] = useState<string[]>([MOCK_PATIENTS[0].id]);
+  const [selectedAppointment, setSelectedAppointment] =
+    useState<Appointment | null>(null);
+  const [selectedPatientIds, setSelectedPatientIds] = useState<string[]>([]);
+
+  const todayDateStr = new Date().toISOString().split("T")[0];
   const [formData, setFormData] = useState({
     therapyType: "Terapia Individual" as TherapyType,
-    date: todayDate,
+    date: todayDateStr,
     time: "09:00",
     status: "Programada" as AppointmentStatus,
     notes: "",
   });
 
-  const fetchAppointments = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setIsPageLoading(true);
-    setTimeout(() => {
-      setAppointments(INITIAL_APPOINTMENTS);
+    try {
+      const [patientsData, appointmentsData] = await Promise.all([
+        PatientService.getAll(),
+        AppointmentService.getAll(),
+      ]);
+      setPatientsList(patientsData);
+      setAppointments(appointmentsData);
+    } catch (error) {
+      showAlert.errorToast("Error al obtener datos desde la API.");
+    } finally {
       setIsPageLoading(false);
-    }, 300);
+    }
   }, []);
 
   useEffect(() => {
-    fetchAppointments();
-  }, [fetchAppointments]);
+    fetchData();
+  }, [fetchData]);
 
-  // Si cambia el tipo de terapia y NO admite múltiples pacientes, reiniciamos a solo 1 paciente
-  const handleTherapyChange = (therapy: TherapyType) => {
-    setFormData((prev) => ({ ...prev, therapyType: therapy }));
-    if (!MULTI_PATIENT_THERAPIES.includes(therapy)) {
-      setSelectedPatientIds((prev) => [prev[0] || MOCK_PATIENTS[0].id]);
-    }
-  };
+  // Validaciones y Handlers
+  const checkTimeConflict = (
+    newDate: string,
+    newTime: string,
+    currentId?: string,
+  ) => {
+    const timeToMinutes = (str: string) => {
+      const [h, m] = str.split(":").map(Number);
+      return h * 60 + m;
+    };
+    const newStart = timeToMinutes(newTime);
+    const newEnd = newStart + 60;
 
-  // Agregar un combobox más de paciente
-  const handleAddPatientSelect = () => {
-    const availablePatient = MOCK_PATIENTS.find(
-      (p) => !selectedPatientIds.includes(p.id)
-    );
-    const nextId = availablePatient ? availablePatient.id : MOCK_PATIENTS[0].id;
-    setSelectedPatientIds((prev) => [...prev, nextId]);
-  };
-
-  // Eliminar un combobox de paciente
-  const handleRemovePatientSelect = (index: number) => {
-    if (selectedPatientIds.length > 1) {
-      setSelectedPatientIds((prev) => prev.filter((_, i) => i !== index));
-    }
-  };
-
-  // Actualizar la selección de paciente de una posición específica
-  const handlePatientSelectChange = (index: number, newPatientId: string) => {
-    setSelectedPatientIds((prev) => {
-      const updated = [...prev];
-      updated[index] = newPatientId;
-      return updated;
+    return appointments.some((app) => {
+      if (app.status === "Cancelada" || (currentId && app.id === currentId))
+        return false;
+      if (app.date === newDate) {
+        const existingStart = timeToMinutes(app.time);
+        const existingEnd = existingStart + 60;
+        return newStart < existingEnd && newEnd > existingStart;
+      }
+      return false;
     });
   };
 
-  // Abrir modal para crear nueva cita
-  const handleOpenAddModal = () => {
+  const handleSendWhatsApp = (appointment: Appointment) => {
+    const firstPatientId = appointment.patientIds[0];
+    const patientData = patientsList.find((p) => p.id === firstPatientId);
+
+    if (!patientData) {
+      showAlert.errorToast("No se encontró el perfil del paciente.");
+      return;
+    }
+
+    let targetPhone = "";
+    let recipientName = "";
+
+    if (patientData.isMinor && patientData.tutor) {
+      if (!patientData.tutor.phone)
+        return showAlert.errorToast("El tutor no posee teléfono.");
+      targetPhone = patientData.tutor.phone;
+      recipientName = patientData.tutor.name
+        ? `Encargado/a de ${patientData.name}`
+        : "Encargado/a";
+    } else {
+      if (!patientData.phone)
+        return showAlert.errorToast("El paciente no posee teléfono.");
+      targetPhone = patientData.phone;
+      recipientName = appointment.patientNames.join(" y ");
+    }
+
+    const cleanPhone = targetPhone.replace(/[^0-9]/g, "");
+    const message = `Estimado/a *${recipientName}*, le saludamos para recordarle la cita de *${appointment.therapyType}* para el día *${appointment.date}* a las *${appointment.time} HS*. Por favor confirme su asistencia.`;
+    window.open(
+      `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`,
+      "_blank",
+    );
+  };
+
+  const handleSubmitForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (
+      checkTimeConflict(formData.date, formData.time, selectedAppointment?.id)
+    ) {
+      showAlert.errorToast(
+        `Ya existe una cita agendada en la fecha ${formData.date} a las ${formData.time} HS.`,
+      );
+      return;
+    }
+
+    setIsLoading(true);
+    const patientNames = selectedPatientIds.map(
+      (id) => patientsList.find((p) => p.id === id)?.name || "Paciente",
+    );
+    const dataToSave = {
+      patientIds: selectedPatientIds,
+      patientNames,
+      therapyType: formData.therapyType,
+      date: formData.date,
+      time: formData.time,
+      status: formData.status,
+      notes: formData.notes,
+    };
+
+    try {
+      if (selectedAppointment) {
+        await AppointmentService.update(selectedAppointment.id, dataToSave);
+        showAlert.successToast("Cita actualizada correctamente.");
+      } else {
+        await AppointmentService.create(dataToSave);
+        showAlert.successToast("Cita agendada correctamente.");
+      }
+      await fetchData();
+      setIsFormModalOpen(false);
+    } catch (error) {
+      showAlert.errorToast("Error al procesar la solicitud.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancelAppointment = async (id: string) => {
+    const confirmed = await showAlert.confirm(
+      "¿Cancelar Cita?",
+      "El estado cambiará a Cancelada.",
+    );
+    if (confirmed) {
+      try {
+        await AppointmentService.cancel(id);
+        showAlert.successToast("La cita fue cancelada.");
+        fetchData();
+      } catch (error) {
+        showAlert.errorToast("Error al cancelar la cita.");
+      }
+    }
+  };
+
+  const handleOpenAddModal = (initialDate?: string) => {
     setSelectedAppointment(null);
-    setSelectedPatientIds([MOCK_PATIENTS[0].id]);
+    setSelectedPatientIds([patientsList[0]?.id || ""]);
     setFormData({
       therapyType: "Terapia Individual",
-      date: todayDate,
+      date: initialDate || todayDateStr,
       time: "09:00",
       status: "Programada",
       notes: "",
@@ -188,13 +233,16 @@ export default function AppointmentsPage() {
     setIsFormModalOpen(true);
   };
 
-  // Abrir modal para editar cita existente
   const handleOpenEditModal = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
-    setSelectedPatientIds(appointment.patientIds || [MOCK_PATIENTS[0].id]);
+    setSelectedPatientIds(
+      appointment.patientIds?.length
+        ? appointment.patientIds
+        : [patientsList[0]?.id || ""],
+    );
     setFormData({
       therapyType: appointment.therapyType,
-      date: appointment.date < todayDate ? todayDate : appointment.date, // Ajuste por si era anterior
+      date: appointment.date,
       time: appointment.time,
       status: appointment.status,
       notes: appointment.notes || "",
@@ -202,88 +250,16 @@ export default function AppointmentsPage() {
     setIsFormModalOpen(true);
   };
 
-  // Abrir modal para ver detalles
-  const handleOpenViewModal = (appointment: Appointment) => {
-    setSelectedAppointment(appointment);
-    setIsViewModalOpen(true);
-  };
-
-  // Guardar Cita
-  const handleSubmitForm = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    // Mapear nombres de pacientes elegidos
-    const patientNames = selectedPatientIds.map(
-      (id) => MOCK_PATIENTS.find((p) => p.id === id)?.name || "Paciente"
-    );
-
-    setTimeout(() => {
-      if (selectedAppointment) {
-        // Actualizar Cita
-        setAppointments((prev) =>
-          prev.map((item) =>
-            item.id === selectedAppointment.id
-              ? {
-                  ...item,
-                  ...formData,
-                  patientIds: selectedPatientIds,
-                  patientNames: patientNames,
-                }
-              : item
-          )
-        );
-        showAlert.successToast("Cita actualizada con éxito");
-      } else {
-        // Crear Cita
-        const newApp: Appointment = {
-          id: Date.now().toString(),
-          patientIds: selectedPatientIds,
-          patientNames: patientNames,
-          therapyType: formData.therapyType,
-          date: formData.date,
-          time: formData.time,
-          status: formData.status,
-          notes: formData.notes,
-        };
-        setAppointments((prev) => [newApp, ...prev]);
-        showAlert.successToast("Cita agendada con éxito");
-      }
-
-      setIsLoading(false);
-      setIsFormModalOpen(false);
-    }, 400);
-  };
-
-  // Eliminar Cita
-  const handleDeleteAppointment = async (id: string) => {
-    const confirmed = await showAlert.confirm(
-      "¿Eliminar Cita?",
-      "Esta cita se eliminará del registro de forma permanente"
-    );
-
-    if (confirmed) {
-      setAppointments((prev) => prev.filter((app) => app.id !== id));
-      showAlert.successToast("Cita eliminada con éxito");
-    }
-  };
-
-  // Filtrado de citas
   const filteredAppointments = appointments.filter((app) => {
     const matchesSearch =
-      app.patientNames.some((name) =>
-        name.toLowerCase().includes(searchTerm.toLowerCase())
+      app.patientNames?.some((name) =>
+        name.toLowerCase().includes(searchTerm.toLowerCase()),
       ) || app.therapyType.toLowerCase().includes(searchTerm.toLowerCase());
-
     const matchesStatus =
       statusFilter === "Todos" || app.status === statusFilter;
-
     return matchesSearch && matchesStatus;
   });
 
-  const isMultiPatientAllowed = MULTI_PATIENT_THERAPIES.includes(formData.therapyType);
-
-  // Columnas para la tabla
   const appointmentColumns: Column<Appointment>[] = [
     {
       header: "Paciente(s)",
@@ -294,11 +270,11 @@ export default function AppointmentsPage() {
           </div>
           <div>
             <span className="font-bold text-gray-900 text-base block">
-              {app.patientNames.join(", ")}
+              {app.patientNames?.join(", ")}
             </span>
             <p className="text-xs text-gray-400 mt-0.5">
-              {app.patientNames.length > 1
-                ? `${app.patientNames.length} Pacientes registrados`
+              {app.patientNames?.length > 1
+                ? `${app.patientNames.length} Pacientes`
                 : "Paciente Individual"}
             </p>
           </div>
@@ -318,7 +294,7 @@ export default function AppointmentsPage() {
       accessor: (app) => (
         <div className="flex flex-col gap-0.5 text-xs font-medium">
           <div className="flex items-center gap-1.5 text-gray-800">
-            <Calendar className="w-3.5 h-3.5 text-gray-400" />
+            <CalendarIcon className="w-3.5 h-3.5 text-gray-400" />
             <span>{app.date}</span>
           </div>
           <div className="flex items-center gap-1.5 text-gray-500">
@@ -331,22 +307,20 @@ export default function AppointmentsPage() {
     {
       header: "Estado",
       accessor: (app) => {
-        if (app.status === "Completada") {
+        if (app.status === "Completada")
           return (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
               Completada
             </span>
           );
-        }
-        if (app.status === "Cancelada") {
+        if (app.status === "Cancelada")
           return (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200/60">
               <XCircle className="w-3.5 h-3.5 text-rose-600" />
               Cancelada
             </span>
           );
-        }
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200/60">
             <Clock3 className="w-3.5 h-3.5 text-amber-600" />
@@ -358,120 +332,158 @@ export default function AppointmentsPage() {
     {
       header: "Acciones",
       align: "right",
-      accessor: (app) => (
-        <div className="flex items-center justify-end gap-1">
+      accessor: (app) => {
+        const isCancelled = app.status === "Cancelada";
+        return (
+          <div className="flex items-center justify-end gap-1">
             <ActionButton
-            icon={<Mail className="w-4 h-4" />}
-            title="Enviar Recordatorio"
-            variant="success"
-            onClick={() => handleOpenViewModal(app)}
-          />
-          {/* 👁️ VER DETALLES */}
-          <ActionButton
-            icon={<Eye className="w-4 h-4" />}
-            title="Ver Detalles"
-            variant="primary"
-            onClick={() => handleOpenViewModal(app)}
-          />
-          {/* ✏️ EDITAR CITA */}
-          <ActionButton
-            icon={<Pencil className="w-4 h-4" />}
-            title="Editar Cita"
-            variant="warning"
-            onClick={() => handleOpenEditModal(app)}
-          />
-          {/* 🗑️ ELIMINAR CITA */}
-          <ActionButton
-            icon={<Trash2 className="w-4 h-4" />}
-            title="Eliminar Cita"
-            variant="danger"
-            onClick={() => handleDeleteAppointment(app.id)}
-          />
-        </div>
-      ),
+              icon={<Mail className="w-4 h-4" />}
+              title={isCancelled ? "Cita cancelada" : "Enviar WhatsApp"}
+              variant={isCancelled ? "danger" : "success"}
+              disabled={isCancelled}
+              onClick={() => !isCancelled && handleSendWhatsApp(app)}
+            />
+            <ActionButton
+              icon={<Eye className="w-4 h-4" />}
+              title="Ver Detalles"
+              variant="primary"
+              onClick={() => {
+                setSelectedAppointment(app);
+                setIsViewModalOpen(true);
+              }}
+            />
+            <ActionButton
+              icon={<Pencil className="w-4 h-4" />}
+              title="Editar Cita"
+              variant="warning"
+              onClick={() => handleOpenEditModal(app)}
+            />
+            <ActionButton
+              icon={<Trash2 className="w-4 h-4" />}
+              title="Cancelar Cita"
+              variant="danger"
+              disabled={isCancelled}
+              onClick={() => !isCancelled && handleCancelAppointment(app.id)}
+            />
+          </div>
+        );
+      },
     },
   ];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif]">
-      {/* Header + Buscador + Filtros */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Header General */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-           
-            Gestión de Citas
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <CalendarDays className="w-7 h-7 text-blue-600" /> Gestión de Citas
           </h1>
           <p className="text-sm text-gray-500 font-medium">
-            Agenda y administración del calendario de sesiones terapéuticas.
+            Organiza tus consultas fácilmente.
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center gap-3">
-          {/* Filtro por Estado */}
-          <div className="w-full sm:w-44">
-            <Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              options={[
-                { label: "Todos los Estados", value: "Todos" },
-                { label: "Programadas", value: "Programada" },
-                { label: "Completadas", value: "Completada" },
-                { label: "Canceladas", value: "Cancelada" },
-              ]}
-            />
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Switch Tab (Tabla vs Calendario) */}
+          <div className="flex items-center p-1 bg-gray-100 rounded-xl border border-gray-200">
+            <button
+              onClick={() => setViewMode("table")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewMode === "table"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-gray-500 hover:text-gray-900"
+              }`}
+            >
+              <List className="w-4 h-4" /> Lista
+            </button>
+            <button
+              onClick={() => setViewMode("calendar")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewMode === "calendar"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-gray-500 hover:text-gray-900"
+              }`}
+            >
+              <CalendarIcon className="w-4 h-4" /> Calendario
+            </button>
           </div>
 
-          {/* Buscador */}
-          <div className="relative w-full sm:w-64">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Buscar paciente o terapia..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-[#F8F9FA] border border-gray-200/80 rounded-2xl text-sm font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
-            />
-          </div>
+          {viewMode === "table" && (
+            <>
+              <div className="w-full sm:w-44">
+                <Select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  options={[
+                    { label: "Todos los Estados", value: "Todos" },
+                    { label: "Programadas", value: "Programada" },
+                    { label: "Completadas", value: "Completada" },
+                    { label: "Canceladas", value: "Cancelada" },
+                  ]}
+                />
+              </div>
+              <div className="relative w-full sm:w-52">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Buscar..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-[#F8F9FA] border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500"
+                />
+              </div>
+            </>
+          )}
 
-          {/* Botón Agendar Cita */}
           <button
-            onClick={handleOpenAddModal}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-2xl shadow-sm transition-all text-sm shrink-0"
+            onClick={() => handleOpenAddModal()}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white font-semibold rounded-xl text-sm hover:bg-blue-700 transition-all"
           >
-            <Plus className="w-4 h-4" />
-            Agendar Cita
+            <Plus className="w-4 h-4" /> Agendar Cita
           </button>
         </div>
       </div>
 
-      {/* Tabla de Citas */}
+      {/* Renderizado Condicional de Componentes */}
       {isPageLoading ? (
         <div className="flex flex-col items-center justify-center py-20 text-gray-400">
           <Loader2 className="w-8 h-8 animate-spin mb-2 text-blue-600" />
-          <p className="text-sm font-medium">Cargando la agenda de citas...</p>
+          <p className="text-sm font-medium">Cargando citas...</p>
         </div>
-      ) : (
+      ) : viewMode === "table" ? (
+        /* COMPONENTE 1: TABLA */
         <Table
           columns={appointmentColumns}
           data={filteredAppointments}
           keyExtractor={(app) => app.id}
           itemsPerPage={6}
-          emptyMessage="No se encontraron citas agendadas que coincidan."
+        />
+      ) : (
+        /* COMPONENTE 2: CALENDARIO */
+        <AppointmentCalendar
+          appointments={appointments}
+          onAddClick={handleOpenAddModal}
+          onEditClick={handleOpenEditModal}
+          onViewClick={(app) => {
+            setSelectedAppointment(app);
+            setIsViewModalOpen(true);
+          }}
+          onCancelClick={handleCancelAppointment}
+          onWhatsAppClick={handleSendWhatsApp}
         />
       )}
 
-      {/* 📝 MODAL AGENDAR / EDITAR CITA (`form_agendarcita`) */}
+      {/* Modales */}
       <Modal
         isOpen={isFormModalOpen}
         onClose={() => setIsFormModalOpen(false)}
         onSubmit={handleSubmitForm}
         title={selectedAppointment ? "Editar Cita" : "Agendar Cita"}
-        submitText={isLoading ? "Guardando..." : "Done"}
-        cancelText="Cancel"
+        submitText={isLoading ? "Guardando..." : "Guardar"}
         isLoading={isLoading}
       >
         <div className="space-y-4">
-          {/* Campo: Tipo Terapia */}
           <div>
             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
               Tipo Terapia
@@ -479,66 +491,27 @@ export default function AppointmentsPage() {
             <Select
               value={formData.therapyType}
               onChange={(e) =>
-                handleTherapyChange(e.target.value as TherapyType)
+                setFormData({
+                  ...formData,
+                  therapyType: e.target.value as TherapyType,
+                })
               }
-              options={THERAPY_OPTIONS.map((t) => ({
-                label: t,
-                value: t,
+              options={THERAPY_OPTIONS.map((t) => ({ label: t, value: t }))}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+              Paciente
+            </label>
+            <Select
+              value={selectedPatientIds[0] || ""}
+              onChange={(e) => setSelectedPatientIds([e.target.value])}
+              options={patientsList.map((p) => ({
+                label: p.name,
+                value: p.id,
               }))}
             />
           </div>
-
-          {/* Campo: Paciente(s) Dinámicos */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold text-gray-700 uppercase">
-                {selectedPatientIds.length > 1 ? "Pacientes" : "Paciente"}
-              </label>
-
-              {/* Muestra el botón solo si la terapia permite múltiples pacientes */}
-              {isMultiPatientAllowed && (
-                <button
-                  type="button"
-                  onClick={handleAddPatientSelect}
-                  className="text-[11px] font-semibold text-blue-600 hover:underline flex items-center gap-1"
-                >
-                  <Plus className="w-3 h-3" />
-                  Agregar paciente
-                </button>
-              )}
-            </div>
-
-            {/* Renderizar uno o varios Comboboxes de Pacientes */}
-            {selectedPatientIds.map((patientId, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <div className="flex-1">
-                  <Select
-                    value={patientId}
-                    onChange={(e) =>
-                      handlePatientSelectChange(index, e.target.value)
-                    }
-                    options={MOCK_PATIENTS.map((p) => ({
-                      label: p.name,
-                      value: p.id,
-                    }))}
-                  />
-                </div>
-                {/* Permite eliminar comboboxes adicionales si hay más de 1 */}
-                {selectedPatientIds.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemovePatientSelect(index)}
-                    className="p-2 text-gray-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors"
-                    title="Quitar paciente"
-                  >
-                    <Trash className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Campo: Fecha (Bloqueado para fechas pasadas) */}
           <div>
             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
               Fecha
@@ -546,16 +519,14 @@ export default function AppointmentsPage() {
             <input
               type="date"
               required
-              min={todayDate} // 👈 Restricción para no permitir fechas pasadas
+              min={todayDateStr}
               value={formData.date}
               onChange={(e) =>
                 setFormData({ ...formData, date: e.target.value })
               }
-              className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-gray-200/80 rounded-2xl text-sm font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+              className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-gray-200 rounded-2xl text-sm font-medium focus:outline-none focus:border-blue-500"
             />
           </div>
-
-          {/* Campo: Hora */}
           <div>
             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
               Hora
@@ -567,11 +538,9 @@ export default function AppointmentsPage() {
               onChange={(e) =>
                 setFormData({ ...formData, time: e.target.value })
               }
-              className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-gray-200/80 rounded-2xl text-sm font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+              className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-gray-200 rounded-2xl text-sm font-medium focus:outline-none focus:border-blue-500"
             />
           </div>
-
-          {/* Campo: Estado */}
           <div>
             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
               Estado
@@ -584,16 +553,12 @@ export default function AppointmentsPage() {
                   status: e.target.value as AppointmentStatus,
                 })
               }
-              options={STATUS_OPTIONS.map((st) => ({
-                label: st,
-                value: st,
-              }))}
+              options={STATUS_OPTIONS.map((st) => ({ label: st, value: st }))}
             />
           </div>
         </div>
       </Modal>
 
-      {/* 👁️ MODAL VER DETALLES DE CITA */}
       <Modal
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
@@ -602,61 +567,33 @@ export default function AppointmentsPage() {
       >
         {selectedAppointment && (
           <div className="space-y-4 text-sm text-gray-700">
-            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200/60 flex items-center justify-between">
+            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-bold text-gray-900">
-                  {selectedAppointment.patientNames.join(", ")}
+                  {selectedAppointment.patientNames?.join(", ")}
                 </h3>
                 <span className="text-xs text-gray-500 font-medium">
                   {selectedAppointment.therapyType}
                 </span>
               </div>
-              <span
-                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
-                  selectedAppointment.status === "Completada"
-                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-                    : selectedAppointment.status === "Cancelada"
-                    ? "bg-rose-50 text-rose-700 border border-rose-200/60"
-                    : "bg-amber-50 text-amber-700 border border-amber-200/60"
-                }`}
-              >
+              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
                 {selectedAppointment.status}
               </span>
             </div>
-
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-white border border-gray-200/80 rounded-xl space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span>Fecha</span>
-                </div>
+              <div className="p-3 bg-white border border-gray-200 rounded-xl">
+                <span className="text-xs text-gray-400 font-medium">Fecha</span>
                 <p className="font-semibold text-gray-800">
                   {selectedAppointment.date}
                 </p>
               </div>
-
-              <div className="p-3 bg-white border border-gray-200/80 rounded-xl space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>Hora</span>
-                </div>
+              <div className="p-3 bg-white border border-gray-200 rounded-xl">
+                <span className="text-xs text-gray-400 font-medium">Hora</span>
                 <p className="font-semibold text-gray-800">
                   {selectedAppointment.time} HS
                 </p>
               </div>
             </div>
-
-            {selectedAppointment.notes && (
-              <div className="p-3 bg-white border border-gray-200/80 rounded-xl space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>Notas Adicionales</span>
-                </div>
-                <p className="text-xs font-medium text-gray-700">
-                  {selectedAppointment.notes}
-                </p>
-              </div>
-            )}
           </div>
         )}
       </Modal>

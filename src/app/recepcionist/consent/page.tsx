@@ -212,7 +212,7 @@ export default function ConsentsPage() {
             {/* ✍️ SOLO MOSTRAR ICONO DE FIRMAR SI ESTÁ PENDIENTE */}
             {!isSigned && (
               <ActionButton
-                icon={<FileSignature className="w-4 h-4" />}
+                icon={<FileSignature className="w-4 h-4 text-red-500" />}
                 title="Firmar Consentimiento Informado"
                 variant="warning"
                 onClick={() => handleOpenConsentModal(patient)}
@@ -375,13 +375,13 @@ export default function ConsentsPage() {
               <span
                 className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
                   selectedPatient.consentStatus === "Firmado"
-                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                    ? "bg-blue-50 text-blue-700 border border-blue-200/60"
                     : "bg-amber-50 text-amber-700 border border-amber-200/60"
                 }`}
               >
                 {selectedPatient.consentStatus === "Firmado" ? (
                   <>
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
                     Firmado
                   </>
                 ) : (
