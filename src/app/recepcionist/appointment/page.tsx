@@ -372,12 +372,12 @@ export default function AppointmentsPage() {
   ];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif]">
       {/* Header General */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4  rounded-2xl">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <CalendarDays className="w-7 h-7 text-blue-600" /> Gestión de Citas
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+            Gestión de Citas
           </h1>
           <p className="text-sm text-gray-500 font-medium">
             Organiza tus consultas fácilmente.
@@ -438,7 +438,7 @@ export default function AppointmentsPage() {
 
           <button
             onClick={() => handleOpenAddModal()}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white font-semibold rounded-xl text-sm hover:bg-blue-700 transition-all"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white font-semibold rounded-xl text-sm hover:bg-blue-700 transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" /> Agendar Cita
           </button>
@@ -474,7 +474,7 @@ export default function AppointmentsPage() {
         />
       )}
 
-      {/* Modales */}
+      {/* Modal para Agendar / Editar Cita */}
       <Modal
         isOpen={isFormModalOpen}
         onClose={() => setIsFormModalOpen(false)}
@@ -484,63 +484,138 @@ export default function AppointmentsPage() {
         isLoading={isLoading}
       >
         <div className="space-y-4">
+          {/* Tipo de Terapia */}
           <div>
             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
               Tipo Terapia
             </label>
             <Select
               value={formData.therapyType}
-              onChange={(e) =>
+              onChange={(e) => {
+                const newTherapy = e.target.value as TherapyType;
                 setFormData({
                   ...formData,
-                  therapyType: e.target.value as TherapyType,
-                })
-              }
+                  therapyType: newTherapy,
+                });
+                // Si cambia a Individual, recortamos la selección solo al primer paciente
+                const isMulti = [
+                  "Terapia de Pareja",
+                  "Terapia Familiar",
+                  "Terapia Grupal",
+                ].includes(newTherapy);
+                if (!isMulti && selectedPatientIds.length > 1) {
+                  setSelectedPatientIds([selectedPatientIds[0]]);
+                }
+              }}
               options={THERAPY_OPTIONS.map((t) => ({ label: t, value: t }))}
             />
           </div>
+
+          {/* 👥 SECCIÓN DE PACIENTES DINÁMICA */}
           <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-              Paciente
-            </label>
-            <Select
-              value={selectedPatientIds[0] || ""}
-              onChange={(e) => setSelectedPatientIds([e.target.value])}
-              options={patientsList.map((p) => ({
-                label: p.name,
-                value: p.id,
-              }))}
-            />
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-gray-700 uppercase">
+                {[
+                  "Terapia de Pareja",
+                  "Terapia Familiar",
+                  "Terapia Grupal",
+                ].includes(formData.therapyType)
+                  ? "Pacientes Participantes"
+                  : "Paciente"}
+              </label>
+              {[
+                "Terapia de Pareja",
+                "Terapia Familiar",
+                "Terapia Grupal",
+              ].includes(formData.therapyType) && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedPatientIds([...selectedPatientIds, ""])
+                  }
+                  className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Agregar Paciente
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              {selectedPatientIds.map((currentId, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <Select
+                      value={currentId}
+                      onChange={(e) => {
+                        const updated = [...selectedPatientIds];
+                        updated[index] = e.target.value;
+                        setSelectedPatientIds(updated);
+                      }}
+                      options={[
+                        { label: "-- Seleccionar Paciente --", value: "" },
+                        ...patientsList.map((p) => ({
+                          label: p.name,
+                          value: p.id,
+                        })),
+                      ]}
+                    />
+                  </div>
+
+                  {/* Botón para remover paciente adicional (si hay más de 1) */}
+                  {selectedPatientIds.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = selectedPatientIds.filter(
+                          (_, i) => i !== index,
+                        );
+                        setSelectedPatientIds(updated);
+                      }}
+                      className="p-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-colors cursor-pointer"
+                      title="Eliminar paciente"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-              Fecha
-            </label>
-            <input
-              type="date"
-              required
-              min={todayDateStr}
-              value={formData.date}
-              onChange={(e) =>
-                setFormData({ ...formData, date: e.target.value })
-              }
-              className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-gray-200 rounded-2xl text-sm font-medium focus:outline-none focus:border-blue-500"
-            />
+
+          {/* Fecha y Hora */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                Fecha
+              </label>
+              <input
+                type="date"
+                required
+                min={todayDateStr}
+                value={formData.date}
+                onChange={(e) =>
+                  setFormData({ ...formData, date: e.target.value })
+                }
+                className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-gray-200 rounded-2xl text-sm font-medium focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                Hora
+              </label>
+              <input
+                type="time"
+                required
+                value={formData.time}
+                onChange={(e) =>
+                  setFormData({ ...formData, time: e.target.value })
+                }
+                className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-gray-200 rounded-2xl text-sm font-medium focus:outline-none focus:border-blue-500"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-              Hora
-            </label>
-            <input
-              type="time"
-              required
-              value={formData.time}
-              onChange={(e) =>
-                setFormData({ ...formData, time: e.target.value })
-              }
-              className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-gray-200 rounded-2xl text-sm font-medium focus:outline-none focus:border-blue-500"
-            />
-          </div>
+
+          {/* Estado */}
           <div>
             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
               Estado
@@ -559,6 +634,7 @@ export default function AppointmentsPage() {
         </div>
       </Modal>
 
+      {/* Modal para Ver Cita */}
       <Modal
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
