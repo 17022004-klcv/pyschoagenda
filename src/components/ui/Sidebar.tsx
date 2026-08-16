@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { PanelLeftClose, PanelLeft } from "lucide-react";
+import { PanelLeftClose, PanelLeft, User } from "lucide-react";
 
 export interface SidebarItem {
   label: string;
@@ -32,6 +32,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // 🎯 Determinar la ruta base dinámicamente (/recepcionist o /psicologa)
+  const baseModule = pathname.split("/")[1] || "recepcionist";
+  const profileHref = `/${baseModule}/profile`; // O `/perfil` según hayas nombrado tu carpeta
+  const isProfileActive = pathname === profileHref;
 
   return (
     <aside
@@ -138,23 +143,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </nav>
       </div>
 
-      {/* Footer Perfil */}
-      <div className="pt-3 border-t border-gray-100 flex items-center justify-between px-1 overflow-hidden">
-        <div className="flex items-center gap-3">
+      {/* 🟢 Footer Perfil Clickeable Detección Automática */}
+      <div className="pt-3 border-t border-gray-100">
+        <Link
+          href={profileHref}
+          title={isCollapsed ? "Perfil" : undefined}
+          className={`flex items-center gap-3 p-2 rounded-2xl transition-all duration-200 cursor-pointer ${
+            isProfileActive
+              ? "bg-gray-300 text-black shadow-sm"
+              : "hover:bg-gray-200/60"
+          } ${isCollapsed ? "justify-center" : ""}`}
+        >
           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center text-xs font-bold shadow-sm shrink-0">
-            PA
+            <User className="w-4 h-4 text-white" />
           </div>
+
           {!isCollapsed && (
             <div className="flex flex-col overflow-hidden">
               <span className="text-xs font-bold text-gray-800 tracking-tight truncate">
                 Perfil
               </span>
-              <span className="text-[10px] text-gray-400 font-medium truncate">
+              <span className="text-[10px] text-gray-500 font-medium truncate">
                 Ver ajustes
               </span>
             </div>
           )}
-        </div>
+        </Link>
       </div>
     </aside>
   );
