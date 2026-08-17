@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
+import Image from "next/image";
 import {
   User,
   Mail,
@@ -13,6 +14,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { showAlert } from "@/lib/sweetalert";
+import { uploadImageToImgBB } from "@/lib/imgbb";
 
 export interface UserProfileData {
   id: string;
@@ -20,16 +22,19 @@ export interface UserProfileData {
   email: string;
   role: "Recepcionista" | "Psicóloga" | "Administrador" | string;
   phone?: string;
-  avatarUrl?: string;
+  photoURL?: string;
   providerId?: string;
 }
 
 interface UserProfileProps {
   user: UserProfileData;
   onSave?: (
-    updatedData: Partial<UserProfileData> & { password?: string },
+    updatedData: Partial<UserProfileData> & {
+      password?: string;
+      photoURL?: string;
+    },
   ) => Promise<void>;
-  onLogout?: () => Promise<void>; // 👈 Nueva prop para cerrar sesión
+  onLogout?: () => Promise<void>;
 }
 
 export const UserProfile: React.FC<UserProfileProps> = ({
@@ -39,11 +44,15 @@ export const UserProfile: React.FC<UserProfileProps> = ({
 }) => {
   const isGoogleUser = user.providerId === "google.com";
 
+  // 🟢 Declaración de estados y referencias que faltaban
+  const [photoURL, setPhotoURL] = useState(user.photoURL || "");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [formData, setFormData] = useState({
     name: user.name || "",
     email: user.email || "",
     phone: user.phone || "",
-    currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
@@ -55,10 +64,43 @@ export const UserProfile: React.FC<UserProfileProps> = ({
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // Manejo de la subida de imagen
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      showAlert.errorToast("Por favor selecciona una imagen válida");
+      return;
+    }
+
+    try {
+      setUploadingPhoto(true);
+
+      // 1. Sube la foto a ImgBB y obtiene la URL
+      const uploadedUrl = await uploadImageToImgBB(file);
+
+      // 2. Actualiza la vista
+      setPhotoURL(uploadedUrl);
+
+      // 3. Guarda la nueva URL en Firebase
+      if (onSave) {
+        await onSave({ photoURL: uploadedUrl });
+      }
+
+      showAlert.successToast("Foto de perfil actualizada correctamente");
+    } catch (error) {
+      console.error(error);
+      showAlert.errorToast("No se pudo subir la foto");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const handleLogoutClick = async () => {
     const isConfirmed = await showAlert.confirm(
       "¿Cerrar sesión?",
-      "Tendrás que volver a ingresar tus credenciales para acceder.",
+      "Tendrás que volver a ingresar para acceder.",
       "Sí, salir",
     );
 
@@ -78,7 +120,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!isGoogleUser && formData.newPassword) {
+    if (formData.newPassword) {
       if (formData.newPassword.length < 6) {
         showAlert.errorToast(
           "La nueva contraseña debe tener al menos 6 caracteres",
@@ -97,21 +139,24 @@ export const UserProfile: React.FC<UserProfileProps> = ({
         await onSave({
           name: formData.name,
           phone: formData.phone,
-          ...(!isGoogleUser && formData.newPassword
-            ? { password: formData.newPassword }
-            : {}),
+          ...(formData.newPassword ? { password: formData.newPassword } : {}),
         });
       }
       showAlert.successToast("Perfil actualizado correctamente");
       setFormData((prev) => ({
         ...prev,
-        currentPassword: "",
         newPassword: "",
         confirmPassword: "",
       }));
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al actualizar el perfil:", error);
-      showAlert.errorToast("Error al guardar los cambios");
+      if (error.code === "auth/credential-already-in-use") {
+        showAlert.errorToast(
+          "Esta contraseña ya está en uso o el método ya existe.",
+        );
+      } else {
+        showAlert.errorToast("Error al guardar los cambios");
+      }
     } finally {
       setLoading(false);
     }
@@ -119,6 +164,15 @@ export const UserProfile: React.FC<UserProfileProps> = ({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif]">
+      {/* Input de archivo invisible */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept="image/*"
+        className="hidden"
+      />
+
       {/* HEADER */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
@@ -130,19 +184,40 @@ export const UserProfile: React.FC<UserProfileProps> = ({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* TARJETA DE RESUMEN, AVATAR Y BOTÓN DE CERRAR SESIÓN */}
+        {/* RESUMEN DE USUARIO */}
         <div className="bg-white border border-gray-200/80 rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
             <div className="relative">
-              <div className="w-24 h-24 rounded-full bg-blue-100 text-blue-600 font-bold text-3xl flex items-center justify-center border-4 border-white shadow-md">
-                {formData.name ? formData.name.charAt(0).toUpperCase() : "U"}
+              {/* Contenedor de la foto */}
+              <div className="w-24 h-24 rounded-full bg-blue-100 text-blue-600 font-bold text-3xl flex items-center justify-center border-4 border-white shadow-md overflow-hidden relative">
+                {photoURL ? (
+                  <Image
+                    src={photoURL}
+                    alt={formData.name || "Foto de perfil"}
+                    fill
+                    unoptimized
+                    className="object-cover"
+                  />
+                ) : formData.name ? (
+                  formData.name.charAt(0).toUpperCase()
+                ) : (
+                  "U"
+                )}
               </div>
+
+              {/* Botón flotante para abrir selector de fotos */}
               <button
                 type="button"
-                className="absolute bottom-0 right-0 bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full shadow-md transition-all cursor-pointer"
-                title="Cambiar foto"
+                disabled={uploadingPhoto}
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute bottom-0 right-0 bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full shadow-md transition-all cursor-pointer disabled:opacity-50"
+                title="Cambiar foto de perfil"
               >
-                <Camera className="w-4 h-4" />
+                {uploadingPhoto ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Camera className="w-4 h-4" />
+                )}
               </button>
             </div>
 
@@ -160,7 +235,6 @@ export const UserProfile: React.FC<UserProfileProps> = ({
             </div>
           </div>
 
-          {/* 🚪 BOTÓN CERRAR SESIÓN */}
           <button
             type="button"
             onClick={handleLogoutClick}
@@ -217,58 +291,58 @@ export const UserProfile: React.FC<UserProfileProps> = ({
           </div>
         </div>
 
-        {/* SEGURIDAD */}
+        {/* SEGURIDAD Y VINCULACIÓN */}
         <div className="bg-white border border-gray-200/80 rounded-3xl p-6 shadow-sm space-y-4">
           <h3 className="text-base font-bold text-gray-900 tracking-tight border-b border-gray-100 pb-3">
-            Seguridad
+            Seguridad y Acceso
           </h3>
 
-          {isGoogleUser ? (
-            <div className="flex items-start gap-3 p-4 bg-blue-50/60 border border-blue-200/60 rounded-2xl text-blue-800 text-xs font-medium">
+          {isGoogleUser && (
+            <div className="flex items-start gap-3 p-4 bg-blue-50/60 border border-blue-200/60 rounded-2xl text-blue-800 text-xs font-medium mb-4">
               <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
               <p>
-                Iniciaste sesión con tu cuenta de <strong>Google</strong>. La
-                gestión de tu contraseña se administra directamente desde tu
-                cuenta de Google.
+                Iniciaste sesión con <strong>Google</strong>. Puedes asignar una
+                contraseña a continuación si también deseas poder entrar usando
+                tu correo y contraseña manualmente.
               </p>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="block text-xs font-bold text-gray-700">
-                  Nueva Contraseña
-                </label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="password"
-                    name="newPassword"
-                    placeholder="Mínimo 6 caracteres"
-                    value={formData.newPassword}
-                    onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-2.5 rounded-2xl border bg-gray-50 border-gray-200 text-sm font-medium focus:bg-white focus:border-blue-500 focus:outline-none transition-all"
-                  />
-                </div>
-              </div>
+          )}
 
-              <div className="space-y-1">
-                <label className="block text-xs font-bold text-gray-700">
-                  Confirmar Nueva Contraseña
-                </label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    placeholder="Repite la contraseña"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-2.5 rounded-2xl border bg-gray-50 border-gray-200 text-sm font-medium focus:bg-white focus:border-blue-500 focus:outline-none transition-all"
-                  />
-                </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-gray-700">
+                {isGoogleUser ? "Asignar Contraseña Local" : "Nueva Contraseña"}
+              </label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="password"
+                  name="newPassword"
+                  placeholder="Mínimo 6 caracteres"
+                  value={formData.newPassword}
+                  onChange={handleChange}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-2xl border bg-gray-50 border-gray-200 text-sm font-medium focus:bg-white focus:border-blue-500 focus:outline-none transition-all"
+                />
               </div>
             </div>
-          )}
+
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-gray-700">
+                Confirmar Contraseña
+              </label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  placeholder="Repite la contraseña"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-2xl border bg-gray-50 border-gray-200 text-sm font-medium focus:bg-white focus:border-blue-500 focus:outline-none transition-all"
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* BOTÓN GUARDAR */}

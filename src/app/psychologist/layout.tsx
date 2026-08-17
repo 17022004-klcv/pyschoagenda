@@ -22,12 +22,12 @@ const psychologistGroups: SidebarGroup[] = [
       },
       {
         label: "Sesiones",
-        href: "/psychologist/sessions",
+        href: "/psychologist/session",
         icon: <NotebookIcon className="w-4 h-4 text-blue-600" />,
       },
       {
         label: "Historial Clínico",
-        href: "/psychologist/medicalHistory",
+        href: "/psychologist/medical_history",
         icon: <FolderClock className="w-4 h-4 text-blue-600" />,
       },
     ],

@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import { signInWithPopup } from "firebase/auth";
+// 1. Importar signInWithEmailAndPassword
+import { signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
 import { auth, googleProvider, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { doc, getDoc, setDoc } from "firebase/firestore";
@@ -14,9 +15,8 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const router = useRouter();
 
-  // Rutas de tus imágenes dentro de la carpeta public/
   const heroImageUrl = "/img3.png";
-  const logoUrl = "/logo.jpeg";
+  const logoUrl = "/logo.png";
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -25,33 +25,29 @@ export default function LoginPage() {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
 
-      // 1. Referencia al documento del usuario en Firestore (Colección "users")
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
 
-      let role = "receptionist"; // Rol por defecto
+      let role = "receptionist";
 
       if (userSnap.exists()) {
-        // 2. Si el usuario ya existe, obtenemos su rol actual
         const userData = userSnap.data();
         role = userData.role || "receptionist";
       } else {
-        // 3. Si es la primera vez que entra, guardamos su perfil con rol por defecto
         await setDoc(userRef, {
           uid: user.uid,
           name: user.displayName,
           email: user.email,
           photoURL: user.photoURL,
-          role: "receptionist", // Cambiar manualmente a "psychologist" en la consola para la psicóloga
+          role: "receptionist",
           createdAt: new Date(),
         });
       }
 
-      // 4. Redirección según el rol
       if (role === "psychologist") {
-        router.push("/psychologist"); // Cambia por tu ruta deseada
+        router.push("/psychologist");
       } else {
-        router.push("/recepcionist"); // Ruta para recepcionista
+        router.push("/recepcionist");
       }
     } catch (err: any) {
       setError("Error al iniciar sesión con Google.");
@@ -61,14 +57,60 @@ export default function LoginPage() {
     }
   };
 
-  const handleEmailLogin = (e: React.FormEvent) => {
+  // 🟢 2. Inicio de sesión real con correo y contraseña
+  const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    router.push("/appointments");
+    if (!email || !password) {
+      setError("Por favor completa todos los campos.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      // Autenticar credenciales en Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password,
+      );
+      const user = userCredential.user;
+
+      // Obtener el rol desde Firestore
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+
+      let role = "receptionist";
+      if (userSnap.exists()) {
+        role = userSnap.data().role || "receptionist";
+      }
+
+      // Redirigir según el rol asignado
+      if (role === "psychologist") {
+        router.push("/psychologist");
+      } else {
+        router.push("/recepcionist");
+      }
+    } catch (err: any) {
+      console.error(err);
+      if (
+        err.code === "auth/invalid-credential" ||
+        err.code === "auth/user-not-found" ||
+        err.code === "auth/wrong-password"
+      ) {
+        setError("Correo o contraseña incorrectos.");
+      } else {
+        setError("Error al iniciar sesión. Inténtalo de nuevo.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen w-full flex flex-col md:flex-row bg-white font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif]">
-      {/* ================= 1. MITAD IZQUIERDA: IMAGEN A PANTALLA COMPLETA ================= */}
+      {/* MITAD IZQUIERDA: IMAGEN */}
       <div className="w-full md:w-1/2 min-h-[300px] md:min-h-screen relative flex flex-col p-8 md:p-12 overflow-hidden shrink-0">
         {heroImageUrl && (
           <Image
@@ -82,10 +124,9 @@ export default function LoginPage() {
         )}
       </div>
 
-      {/* ================= 2. MITAD DERECHA: LOGO CÍRCULO Y FORMULARIO ================= */}
+      {/* MITAD DERECHA: FORMULARIO */}
       <div className="w-full md:w-1/2 flex bg-[#f5f5f7] items-center justify-center p-8 sm:p-12 md:p-16">
         <div className="w-full max-w-sm flex flex-col items-center">
-          {/* CONTENEDOR CIRCULAR DEL LOGO */}
           <div className="relative w-28 h-28 rounded-full bg-blue-50 border-2 border-blue-100 flex items-center justify-center mb-6 shadow-lg shadow-blue-500/10 overflow-hidden shrink-0">
             {logoUrl ? (
               <Image
@@ -97,9 +138,6 @@ export default function LoginPage() {
             ) : (
               <div className="flex flex-col items-center justify-center text-blue-600 font-bold">
                 <span className="text-4xl">Ψ</span>
-                <span className="text-[10px] text-blue-400 font-medium">
-                  [ LOGO ]
-                </span>
               </div>
             )}
           </div>
@@ -117,14 +155,14 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Formulario */}
           <form onSubmit={handleEmailLogin} className="w-full space-y-3.5">
             <input
               type="email"
               placeholder="Correo electrónico"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4.5 py-3 text-sm bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all text-gray-800 placeholder-gray-400"
+              disabled={loading}
+              className="w-full px-4.5 py-3 text-sm bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all text-gray-800 placeholder-gray-400 disabled:opacity-50"
             />
 
             <input
@@ -132,18 +170,19 @@ export default function LoginPage() {
               placeholder="Contraseña"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4.5 py-3 text-sm bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all text-gray-800 placeholder-gray-400"
+              disabled={loading}
+              className="w-full px-4.5 py-3 text-sm bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all text-gray-800 placeholder-gray-400 disabled:opacity-50"
             />
 
             <button
               type="submit"
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-2xl shadow-md shadow-blue-500/25 transition-all duration-200 active:scale-95"
+              disabled={loading}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-2xl shadow-md shadow-blue-500/25 transition-all duration-200 active:scale-95 disabled:opacity-50 cursor-pointer"
             >
-              Iniciar Sesión
+              {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
             </button>
           </form>
 
-          {/* Divisor */}
           <div className="w-full flex items-center my-6 gap-3">
             <div className="flex-1 h-[1px] bg-gray-200" />
             <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">
@@ -152,12 +191,11 @@ export default function LoginPage() {
             <div className="flex-1 h-[1px] bg-gray-200" />
           </div>
 
-          {/* Botón de Google */}
           <button
             type="button"
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-700 font-semibold py-3 px-4 rounded-2xl border border-gray-200/80 shadow-sm transition-all duration-200 active:scale-95 disabled:opacity-50 text-xs"
+            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-700 font-semibold py-3 px-4 rounded-2xl border border-gray-200/80 shadow-sm transition-all duration-200 active:scale-95 disabled:opacity-50 text-xs cursor-pointer"
           >
             {loading ? (
               <span>Cargando...</span>
