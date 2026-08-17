@@ -35,4 +35,27 @@ export const sessionService = {
       ...docSnap.data(),
     })) as SessionData[];
   },
+
+  async getAllSessions(): Promise<SessionData[]> {
+    try {
+      const sessionsRef = collection(db, "sessions");
+      
+      // Ordenar por fecha o fecha de creación si es posible
+      const q = query(sessionsRef, orderBy("date", "desc"));
+      const querySnapshot = await getDocs(q);
+
+      const sessions: SessionData[] = [];
+      querySnapshot.forEach((doc) => {
+        sessions.push({
+          id: doc.id,
+          ...doc.data(),
+        } as SessionData);
+      });
+
+      return sessions;
+    } catch (error) {
+      console.error("Error al obtener todas las sesiones:", error);
+      throw error;
+    }
+  },
 };

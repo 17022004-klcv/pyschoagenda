@@ -15,7 +15,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const router = useRouter();
 
-  const heroImageUrl = "/img3.png";
+  const heroImageUrl = "/prueba.jpg";
   const logoUrl = "/logo.png";
 
   const handleGoogleLogin = async () => {

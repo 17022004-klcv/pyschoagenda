@@ -1,13 +1,31 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Calendar, Save } from "lucide-react";
+import { Calendar, Save, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { showAlert } from "@/lib/sweetalert";
 import { sessionService } from "@/services/session.service";
-import { PatientService } from "@/services/patient.service"; // Importas tu servicio de pacientes
+import { PatientService } from "@/services/patient.service";
+import { TherapyType } from "@/services/appointment.service";
+import { ExpedientService } from "@/services/expedient.service";
+import { Patient } from "@/services/patient.service"; // O la interfaz/tipo de tu paciente
+
+const THERAPY_OPTIONS: TherapyType[] = [
+  "Terapia Individual",
+  "Terapia de Pareja",
+  "Terapia Familiar",
+  "Terapia en Línea",
+  "Orientación Vocacional",
+  "Terapia de Grupo",
+];
+
+const MULTI_PATIENT_THERAPIES: TherapyType[] = [
+  "Terapia de Pareja",
+  "Terapia Familiar",
+  "Terapia de Grupo",
+];
 
 export default function SessionPage() {
   const currentDate = new Date().toLocaleDateString("es-ES", {
@@ -16,6 +34,7 @@ export default function SessionPage() {
     year: "numeric",
   });
 
+  const [rawPatients, setRawPatients] = useState<Patient[]>([]);
   const [patientOptions, setPatientOptions] = useState<
     { value: string; label: string }[]
   >([{ value: "", label: "Cargando pacientes..." }]);
@@ -24,9 +43,10 @@ export default function SessionPage() {
     { value: string; label: string }[]
   >([{ value: "", label: "Seleccionar tutor..." }]);
 
+  // 1. Cambiamos patient: "" por selectedPatients: [""]
   const [formData, setFormData] = useState({
-    patient: "",
-    therapyType: "Individual",
+    selectedPatients: [""] as string[],
+    therapyType: "Terapia Individual" as TherapyType,
     hasTutor: false,
     tutorName: "",
     theme: "",
@@ -35,77 +55,131 @@ export default function SessionPage() {
   });
 
   useEffect(() => {
-    async function fetchPatients() {
-      try {
-        const patients = await PatientService.getAll(); // Trae los datos de la BD
-        const formattedPatients = patients.map((patient) => ({
-          value: patient.id,
-          label: patient.name,
+  async function loadData() {
+    try {
+      const patientsData = await PatientService.getAll();
+      
+      // 1. Guardar pacientes en estado sin formatear
+      setRawPatients(patientsData);
+
+      // 2. Formatear lista para el Select de Pacientes
+      const formattedPatients = patientsData.map((p) => ({
+        value: p.id,
+        label: p.name,
+      }));
+
+      // 3. Extraer y formatear lista de Tutores
+      const tutorsList = patientsData
+        .filter((p) => p.tutor && p.tutor.name)
+        .map((p) => ({
+          value: p.tutor!.name,
+          label: `${p.tutor!.name} (${p.tutor!.relationship} de ${p.name})`,
         }));
 
-        setPatientOptions([
-          { value: "", label: "Seleccionar paciente..." },
-          ...formattedPatients,
-        ]);
-      } catch (error) {
-        console.error("Error al cargar pacientes:", error);
-      }
-    }
+      // 4. Actualizar las opciones de los Selects
+      setPatientOptions([
+        { value: "", label: "Seleccionar paciente..." },
+        ...formattedPatients,
+      ]);
 
-    fetchPatients();
-  }, []);
-
-  // Dentro del componente SessionPage:
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.patient || !formData.theme) {
-      showAlert?.errorToast
-        ? showAlert.errorToast("Por favor completa los campos obligatorios")
-        : alert("Por favor completa los campos obligatorios");
-      return;
-    }
-
-    try {
-      await sessionService.createSession({
-        patientId: formData.patient,
-        expedientCode: "EXP-TEMP", // Se reemplazará con la lectura dinámica del paciente
-        therapyType: formData.therapyType,
-        hasTutor: formData.hasTutor,
-        tutorName: formData.hasTutor ? formData.tutorName : "",
-        theme: formData.theme,
-        summary: formData.summary,
-        analysis: formData.analysis,
-        date: currentDate,
-      });
-
-      showAlert?.successToast
-        ? showAlert.successToast("Sesión guardada en el expediente con éxito")
-        : alert("Sesión guardada con éxito");
-
-      // Limpiar el formulario
-      setFormData({
-        patient: "",
-        therapyType: "Individual",
-        hasTutor: false,
-        tutorName: "",
-        theme: "",
-        summary: "",
-        analysis: "",
-      });
+      setTutorOptions([
+        { value: "", label: "Seleccionar tutor..." },
+        ...tutorsList,
+      ]);
     } catch (error) {
-      console.error("Error al guardar la sesión:", error);
-      showAlert?.errorToast
-        ? showAlert.errorToast("Error al guardar la sesión")
-        : alert("Error al guardar la sesión");
+      console.error("Error al cargar datos:", error);
     }
+  }
+
+  loadData();
+}, []);
+  // Handlers para agregar, actualizar y remover selectores de paciente
+  const handlePatientChange = (index: number, value: string) => {
+    const updated = [...formData.selectedPatients];
+    updated[index] = value;
+    setFormData({ ...formData, selectedPatients: updated });
   };
+
+  const handleAddPatientSelect = () => {
+    setFormData({
+      ...formData,
+      selectedPatients: [...formData.selectedPatients, ""],
+    });
+  };
+
+  const handleRemovePatientSelect = (index: number) => {
+    const updated = formData.selectedPatients.filter((_, i) => i !== index);
+    setFormData({ ...formData, selectedPatients: updated });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  // Validación: verificar que al menos el primer paciente esté seleccionado
+  const validPatients = formData.selectedPatients.filter((p) => p !== "");
+  if (validPatients.length === 0 || !formData.theme) {
+    showAlert?.errorToast
+      ? showAlert.errorToast("Por favor completa los campos obligatorios")
+      : alert("Por favor completa los campos obligatorios");
+    return;
+  }
+
+  try {
+    // 🟢 1. Obtener la información completa de los pacientes seleccionados
+    const selectedPatientsData = rawPatients.filter((p) =>
+      validPatients.includes(p.id)
+    );
+
+    const patientIds = selectedPatientsData.map((p) => p.id);
+    const patientNames = selectedPatientsData.map((p) => p.name);
+
+    // 🟢 2. Generar u obtener el expediente (sea Individual, Pareja, Familiar, etc.)
+    const expedient = await ExpedientService.getOrCreateExpedient({
+      patientIds,
+      patientNames,
+      therapyType: formData.therapyType,
+    });
+
+    // 🟢 3. Crear la sesión pasando el código real obtenido (ej: "JCMP001")
+    await sessionService.createSession({
+      patientId: validPatients[0], // O enviar el arreglo 'patientIds' si tu backend lo acepta
+      expedientCode: expedient.code, // 👈 Aquí se asigna el código dinámico
+      therapyType: formData.therapyType,
+      hasTutor: formData.hasTutor,
+      tutorName: formData.hasTutor ? formData.tutorName : "",
+      theme: formData.theme,
+      summary: formData.summary,
+      analysis: formData.analysis,
+      date: currentDate,
+    });
+
+    showAlert?.successToast
+      ? showAlert.successToast("Sesión guardada en el expediente con éxito")
+      : alert("Sesión guardada con éxito");
+
+    // Limpieza de formulario
+    setFormData({
+      selectedPatients: [""],
+      therapyType: "Terapia Individual" as TherapyType,
+      hasTutor: false,
+      tutorName: "",
+      theme: "",
+      summary: "",
+      analysis: "",
+    });
+  } catch (error) {
+    console.error("Error al guardar la sesión:", error);
+    showAlert?.errorToast
+      ? showAlert.errorToast("Error al guardar la sesión")
+      : alert("Error al guardar la sesión");
+  }
+};
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif]">
       <div>
-        {/* Cabecera */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200">
-          <h1 className="text-xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
             Registro de Sesión
           </h1>
           <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200 w-fit">
@@ -114,26 +188,43 @@ export default function SessionPage() {
           </div>
         </div>
 
-        {/* Formulario */}
         <form onSubmit={handleSubmit} className="space-y-6 pt-6">
-          {/* Fila 1: Paciente y Tipo de Terapia */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-gray-700">
-                Paciente(s)
-              </label>
-              <Select
-                value={formData.patient}
-                onChange={(e) =>
-                  setFormData({ ...formData, patient: e.target.value })
-                }
-                options={patientOptions}
-              />
-              <span className="text-[11px] text-blue-600 font-semibold cursor-pointer hover:underline block pt-0.5">
-                + Agregar nuevo paciente
-              </span>
+            
+            {/* Lista Dinámica de Pacientes */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-gray-700">Paciente(s)</label>
+              {formData.selectedPatients.map((patientId, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <Select
+                      value={patientId}
+                      onChange={(e) => handlePatientChange(index, e.target.value)}
+                      options={patientOptions}
+                    />
+                  </div>
+                  {formData.selectedPatients.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePatientSelect(index)}
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Eliminar paciente"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={handleAddPatientSelect}
+                className="text-[11px] text-blue-600 font-semibold cursor-pointer hover:underline flex items-center gap-1 pt-0.5"
+              >
+                <Plus className="w-3 h-3" /> Agregar otro paciente
+              </button>
             </div>
 
+            {/* Tipo de Terapia */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-gray-700">
                 Tipo de Terapia
@@ -141,14 +232,15 @@ export default function SessionPage() {
               <Select
                 value={formData.therapyType}
                 onChange={(e) =>
-                  setFormData({ ...formData, therapyType: e.target.value })
+                  setFormData({
+                    ...formData,
+                    therapyType: e.target.value as TherapyType,
+                  })
                 }
-                options={[
-                  { value: "Individual", label: "Individual" },
-                  { value: "Pareja", label: "Pareja" },
-                  { value: "Familiar", label: "Familiar" },
-                  { value: "Infantil", label: "Infantil / Adolescente" },
-                ]}
+                options={THERAPY_OPTIONS.map((therapy) => ({
+                  value: therapy,
+                  label: therapy,
+                }))}
               />
             </div>
           </div>
@@ -233,10 +325,14 @@ export default function SessionPage() {
           </div>
 
           {/* Botón Guardar */}
-          <div className="flex justify-end pt-2">
-            <Button type="submit" className="flex items-center gap-2">
-              <Save className="w-4 h-4" /> Guardar Sesión
-            </Button>
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-2xl transition-all shadow-sm disabled:opacity-50 flex items-center gap-2 text-sm cursor-pointer"
+            >
+              <Save className="w-4 h-4" />
+              <span>Guardar Sesión</span>
+            </button>
           </div>
         </form>
       </div>
