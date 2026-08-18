@@ -1,22 +1,28 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
-
-// 📥 GET /api/patients/[id]/download -> Descargar ficha individual
-export async function GET(request: Request, { params }: RouteParams) {
+// 📥 GET /api/patients/download?id=XYZ -> Descargar ficha individual
+export async function GET(request: NextRequest) {
   try {
-    const { id } = await params;
+    // Obtenemos el ID directamente desde los query params (?id=...)
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json(
+        { message: "El ID del paciente es requerido" },
+        { status: 400 }
+      );
+    }
+
     const docRef = doc(db, "patients", id);
     const docSnap = await getDoc(docRef);
 
     if (!docSnap.exists()) {
       return NextResponse.json(
         { message: "Paciente no encontrado" },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
@@ -43,13 +49,13 @@ export async function GET(request: Request, { params }: RouteParams) {
       status: 200,
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename=ficha_${p.name.replace(/\s+/g, "_")}.csv`,
+        "Content-Disposition": `attachment; filename=ficha_${(p.name || "paciente").replace(/\s+/g, "_")}.csv`,
       },
     });
   } catch (error: any) {
     return NextResponse.json(
       { message: "Error al descargar ficha", error: error.message },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

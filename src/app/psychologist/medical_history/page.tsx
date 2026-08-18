@@ -14,14 +14,14 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { Table, Column } from "@/components/ui/Table";
-import { ModalSheet } from "@/components/ui/Modal"; // Ajusta la ruta a tu ModalSheet
+import { ModalSheet } from "@/components/ui/Modal";
 import { sessionService } from "@/services/session.service";
 import { PatientService, Patient } from "@/services/patient.service";
 import { SessionData } from "@/types/session";
 import { PDFDownloadLink } from "@react-pdf/renderer";
-import { ExpedientHistoryPdfDocument } from "@/components/pdf/ExpedientHistoryPdfDocument";
 import { SessionDetailPdfDocument } from "@/components/pdf/SessionDetailPdfDocument";
 import { AppointmentProofPdfDocument } from "@/components/pdf/AppointmentProofPdfDocument";
+import { FullExpedientPdfDocument } from "@/components/pdf/FullExpedientPdfDocument";
 
 const THERAPY_OPTIONS = [
   { value: "TODAS", label: "Todas las terapias" },
@@ -40,15 +40,17 @@ export default function MedicalHistoryPage() {
   const [selectedTherapy, setSelectedTherapy] = useState("TODAS");
   const [loading, setLoading] = useState(true);
 
-  // Estados para Modales
-  const [selectedSession, setSelectedSession] = useState<SessionData | null>(
-    null,
-  );
+  // Estados para Modal de Descarga
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [downloadScope, setDownloadScope] = useState<"ALL" | "SPECIFIC">("ALL");
+  const [selectedPatientExpedient, setSelectedPatientExpedient] = useState<string>("");
+
+  // Estados para Modales de Detalle/Edición
+  const [selectedSession, setSelectedSession] = useState<SessionData | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Estado de edición de formulario
   const [editFormData, setEditFormData] = useState({
     theme: "",
     therapyType: "",
@@ -75,14 +77,16 @@ export default function MedicalHistoryPage() {
     loadData();
   }, []);
 
-  // Función para obtener los nombres reales cruzando IDs
+  // 🟢 Función para obtener nombres cruzando IDs (Corregida)
   const getPatientDisplayNames = (session: SessionData): string => {
-    // 1. Si ya tiene un string directo guardado
     if (session.patientName) return session.patientName;
 
-    // 2. Si contiene arreglo de IDs
-    const pIds =
-      session.patientId || (session.patientId ? [session.patientId] : []);
+    const pIds = session.patientId 
+      ? session.patientId
+      : session.patientId 
+      ? [session.patientId] 
+      : [];
+
     if (pIds.length > 0) {
       const foundNames = patients
         .filter((p) => pIds.includes(p.id))
@@ -94,7 +98,7 @@ export default function MedicalHistoryPage() {
     return "Paciente no encontrado";
   };
 
-  // Filtrado de sesiones
+  // 1️⃣ Filtrado de sesiones principal (Puesta PRIMERO)
   const filteredSessions = useMemo(() => {
     return sessions.filter((session) => {
       const query = searchQuery.toLowerCase().trim();
@@ -111,6 +115,44 @@ export default function MedicalHistoryPage() {
       return matchesCodeOrPatient && matchesTherapy;
     });
   }, [sessions, patients, searchQuery, selectedTherapy]);
+
+  // 2️⃣ Opciones para el Select de expedientes
+  const patientExpedientOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    sessions.forEach((s) => {
+      const pName = getPatientDisplayNames(s);
+      const key = s.expedientCode || pName;
+      if (key && !map.has(key)) {
+        map.set(key, `${s.expedientCode ? `[${s.expedientCode}] ` : ""}${pName}`);
+      }
+    });
+
+    return Array.from(map.entries()).map(([value, label]) => ({
+      label,
+      value,
+    }));
+  }, [sessions, patients]);
+
+  // 3️⃣ Lógica de sesiones a descargar
+  const sessionsToDownload = useMemo(() => {
+    if (downloadScope === "ALL") {
+      return filteredSessions.map((s) => ({
+        ...s,
+        patientName: getPatientDisplayNames(s),
+      }));
+    }
+
+    return sessions
+      .filter(
+        (s) =>
+          s.expedientCode === selectedPatientExpedient ||
+          getPatientDisplayNames(s) === selectedPatientExpedient
+      )
+      .map((s) => ({
+        ...s,
+        patientName: getPatientDisplayNames(s),
+      }));
+  }, [downloadScope, selectedPatientExpedient, filteredSessions, sessions, patients]);
 
   // Acciones de Modal
   const handleOpenView = (session: SessionData) => {
@@ -135,14 +177,12 @@ export default function MedicalHistoryPage() {
 
     try {
       setIsSaving(true);
-      // Lógica de actualización de la sesión
       await sessionService.updateSession(selectedSession.id, editFormData);
 
-      // Actualizar estado local reactivamente
       setSessions((prev) =>
         prev.map((s) =>
-          s.id === selectedSession.id ? { ...s, ...editFormData } : s,
-        ),
+          s.id === selectedSession.id ? { ...s, ...editFormData } : s
+        )
       );
 
       setIsEditOpen(false);
@@ -205,7 +245,6 @@ export default function MedicalHistoryPage() {
 
         return (
           <div className="flex items-center justify-center gap-1">
-            {/* Botón Ver */}
             <button
               onClick={() => handleOpenView(item)}
               className="p-1.5 hover:bg-blue-50 text-gray-500 hover:text-blue-600 rounded-lg transition-colors"
@@ -214,7 +253,6 @@ export default function MedicalHistoryPage() {
               <Eye className="w-4 h-4" />
             </button>
 
-            {/* Botón Editar */}
             <button
               onClick={() => handleOpenEdit(item)}
               className="p-1.5 hover:bg-amber-50 text-gray-500 hover:text-amber-600 rounded-lg transition-colors"
@@ -223,7 +261,6 @@ export default function MedicalHistoryPage() {
               <Edit className="w-4 h-4" />
             </button>
 
-            {/* Botón Descargar Registro de Sesión Individual */}
             <PDFDownloadLink
               document={
                 <SessionDetailPdfDocument
@@ -244,7 +281,6 @@ export default function MedicalHistoryPage() {
               )}
             </PDFDownloadLink>
 
-            {/* 🟢 Botón Generar Constancia de Cita */}
             <PDFDownloadLink
               document={
                 <AppointmentProofPdfDocument
@@ -274,68 +310,138 @@ export default function MedicalHistoryPage() {
     <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display',sans-serif]">
       {/* Encabezado */}
       <div className="flex justify-between items-center pb-4 border-b border-gray-200">
-        <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-          <FileText className="w-5 h-5 text-blue-600" />
-          Historial Clínico
-        </h1>
+  <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+    <FileText className="w-5 h-5 text-blue-600" />
+    Historial Clínico
+  </h1>
+</div>
+
+{/* Barra de Filtros y Botón de Opciones de Descarga */}
+<div className="flex flex-col sm:flex-row items-center gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+  <div className="relative flex-1 w-full">
+    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+    <Input
+      placeholder="Cod. exp / paciente"
+      value={searchQuery}
+      onChange={(e) => setSearchQuery(e.target.value)}
+      className="pl-9 text-xs"
+    />
+  </div>
+
+  <div className="w-full sm:w-64">
+    <Select
+      value={selectedTherapy}
+      onChange={(e) => setSelectedTherapy(e.target.value)}
+      options={THERAPY_OPTIONS}
+    />
+  </div>
+
+  {/* 🟢 Botón para Abrir Modal de Opciones de Descarga */}
+  <div className="w-full sm:w-auto">
+    <Button
+      onClick={() => setIsDownloadModalOpen(true)}
+      variant="secondary"
+      className="flex items-center gap-2 text-xs font-semibold px-4 py-2 text-gray-700 hover:bg-gray-50 border border-gray-300 w-full justify-center"
+    >
+      <Download className="w-4 h-4 text-blue-600" />
+      <span>Opciones de Descarga</span>
+    </Button>
+  </div>
+</div>
+
+{/* 🟢 MODAL DE DESCARGA DE EXPEDIENTES */}
+{isDownloadModalOpen && (
+  <ModalSheet
+    isOpen={isDownloadModalOpen}
+    onClose={() => setIsDownloadModalOpen(false)}
+    title="Descargar Expedientes Clínicos"
+  >
+    <div className="space-y-4 text-xs">
+      <div>
+        <label className="block text-gray-700 font-bold mb-1">
+          Tipo de Reporte / Descarga
+        </label>
+        <Select
+          value={downloadScope}
+          onChange={(e) =>
+            setDownloadScope(e.target.value as "ALL" | "SPECIFIC")
+          }
+          options={[
+            {
+              label: "Todas las sesiones (Historial filtrado)",
+              value: "ALL",
+            },
+            {
+              label: "Expediente específico de un paciente",
+              value: "SPECIFIC",
+            },
+          ]}
+          searchable={false}
+        />
       </div>
 
-      {/* Barra de Filtros */}
-      <div className="flex flex-col sm:flex-row items-center gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-        <div className="relative flex-1 w-full">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <Input
-            placeholder="Cod. exp / paciente"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 text-xs"
-          />
-        </div>
-
-        <div className="w-full sm:w-auto">
-          <PDFDownloadLink
-            document={
-              <ExpedientHistoryPdfDocument
-                sessions={filteredSessions.map((s) => ({
-                  ...s,
-                  patientName: getPatientDisplayNames(s),
-                }))}
-                filterLabel={
-                  searchQuery
-                    ? `Filtro: "${searchQuery}" | Terapia: ${selectedTherapy}`
-                    : `Terapia: ${selectedTherapy}`
-                }
-              />
-            }
-            fileName={
-              searchQuery
-                ? `Expediente_${searchQuery.replace(/\s+/g, "_")}.pdf`
-                : "Historial_Clinico_Completo.pdf"
-            }
-          >
-            {({ loading: pdfLoading }) => (
-              <Button
-                variant="secondary"
-                disabled={pdfLoading || filteredSessions.length === 0}
-                className="flex items-center gap-2 text-xs font-semibold px-4 py-2 text-gray-700 hover:bg-gray-50 border border-gray-300 w-full justify-center"
-              >
-                <Download className="w-4 h-4 text-blue-600" />
-                <span>
-                  {pdfLoading ? "Generando..." : "Descargar Expediente"}
-                </span>
-              </Button>
-            )}
-          </PDFDownloadLink>
-        </div>
-
-        <div className="w-full sm:w-64">
+      {/* Si elige Expediente Específico, mostramos tu componente Select con los Pacientes */}
+      {downloadScope === "SPECIFIC" && (
+        <div>
+          <label className="block text-gray-700 font-bold mb-1">
+            Seleccionar Expediente / Paciente
+          </label>
           <Select
-            value={selectedTherapy}
-            onChange={(e) => setSelectedTherapy(e.target.value)}
-            options={THERAPY_OPTIONS}
+            value={selectedPatientExpedient}
+            onChange={(e) => setSelectedPatientExpedient(e.target.value)}
+            options={patientExpedientOptions}
+            placeholder="Buscar por código o nombre..."
+            searchable={true}
           />
         </div>
+      )}
+
+      <div className="pt-4 border-t flex justify-end gap-2">
+        <Button
+          variant="secondary"
+          onClick={() => setIsDownloadModalOpen(false)}
+        >
+          Cancelar
+        </Button>
+
+        {/* Generador y Descargador de PDF */}
+        <PDFDownloadLink
+          document={
+            <FullExpedientPdfDocument
+              sessions={sessionsToDownload}
+              expedientTitle={
+                downloadScope === "SPECIFIC"
+                  ? `EXPEDIENTE: ${selectedPatientExpedient}`
+                  : "HISTORIAL CLÍNICO GENERAL"
+              }
+            />
+          }
+          fileName={
+            downloadScope === "SPECIFIC"
+              ? `Expediente_${selectedPatientExpedient.replace(/\s+/g, "_")}.pdf`
+              : "Historial_Clinico_Completo.pdf"
+          }
+        >
+          {({ loading: pdfLoading }) => (
+            <Button
+              disabled={
+                pdfLoading ||
+                sessionsToDownload.length === 0 ||
+                (downloadScope === "SPECIFIC" && !selectedPatientExpedient)
+              }
+              className="flex items-center gap-2 text-xs font-semibold px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+            >
+              <Download className="w-4 h-4" />
+              <span>
+                {pdfLoading ? "Generando Documento..." : "Descargar PDF"}
+              </span>
+            </Button>
+          )}
+        </PDFDownloadLink>
       </div>
+    </div>
+  </ModalSheet>
+)}
 
       {/* Tabla */}
       {loading ? (
