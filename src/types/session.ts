@@ -10,5 +10,6 @@ export interface SessionData {
   summary: string;
   analysis: string;
   date: string;
+  time?: string;
   createdAt?: any;
 }

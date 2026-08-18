@@ -35,18 +35,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   // 🎯 Determinar la ruta base dinámicamente (/recepcionist o /psicologa)
   const baseModule = pathname.split("/")[1] || "recepcionist";
-  const profileHref = `/${baseModule}/profile`; // O `/perfil` según hayas nombrado tu carpeta
+  const profileHref = `/${baseModule}/profile`;
   const isProfileActive = pathname === profileHref;
 
   return (
     <aside
-      className={`h-[calc(100vh-2rem)] m-1 rounded-2xl bg-[#F2F1F6] backdrop-blur-xl border border-gray-200/60 shadow-xl shadow-gray-200/40 flex flex-col justify-between p-4 select-none font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif] transition-all duration-300 ${
+      /* 🟢 'sticky top-2' o 'fixed top-1' lo mantendrá congelado mientras haces scroll */
+      className={`sticky top-2 h-[calc(100vh-1rem)] m-1 rounded-2xl bg-[#F2F1F6] backdrop-blur-xl border border-gray-200/60 shadow-xl shadow-gray-200/40 flex flex-col justify-between p-4 select-none font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif] transition-all duration-300 z-40 shrink-0 ${
         isCollapsed ? "w-20" : "w-68"
       }`}
     >
-      <div>
-        <div className="flex items-center justify-between pb-4 border-b border-gray-100 min-h-[52px]">
-          {/* Cuando está colapsado, ocultamos logo y textos */}
+      {/* Contenedor Superior (Header + Navegación) */}
+      <div className="flex flex-col h-full overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between pb-4 border-b border-gray-200/80 shrink-0 min-h-[52px]">
           {!isCollapsed ? (
             <div className="flex items-center gap-3 overflow-hidden">
               {/* Logo */}
@@ -59,7 +61,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className="object-cover"
                   />
                 ) : (
-                  <span className=" bg-amber-500 font-bold text-lg">Ψ</span>
+                  <span className="bg-amber-500 font-bold text-lg text-white w-full h-full flex items-center justify-center">
+                    Ψ
+                  </span>
                 )}
               </div>
 
@@ -93,13 +97,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
-        {/* Navigation Items */}
-        <nav className="mt-5 space-y-4">
+        {/* 🟢 Navigation Items con Scroll Propio si la pantalla es corta */}
+        <nav className="mt-4 flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
           {groups.map((group, groupIdx) => (
             <div key={groupIdx} className="space-y-1">
               {/* Título de sección */}
               {group.title && !isCollapsed && (
-                <p className="px-3 text-[18px] font-bold text-black mb-2 truncate">
+                <p className="px-3 text-[14px] font-bold text-gray-900 mb-2 truncate">
                   {group.title}
                 </p>
               )}
@@ -113,17 +117,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     title={isCollapsed ? item.label : undefined}
                     className={`group flex items-center gap-3 px-2.5 py-2 rounded-2xl text-[13px] transition-all duration-200 ${
                       isActive
-                        ? "bg-gray-300 text-black shadow-md shadow-blue-500/25 scale-[1.01]"
-                        : "text-black hover:bg-gray-100/80 hover:text-gray-900"
+                        ? "bg-gray-300 text-black shadow-md shadow-gray-400/20 scale-[1.01]"
+                        : "text-gray-800 hover:bg-gray-200/70 hover:text-gray-900"
                     } ${isCollapsed ? "justify-center" : ""}`}
                   >
-                    {/* Contenedor con Figura Azul del Ícono */}
+                    {/* Contenedor del Ícono */}
                     {item.icon && (
                       <div
                         className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200 ${
                           isActive
-                            ? "bg-white/20 text-white"
-                            : "bg-transparent text-blue-600 group-hover:bg-blue-50/60"
+                            ? "bg-white/40 text-black"
+                            : "bg-transparent text-blue-600 group-hover:bg-blue-50/80"
                         }`}
                       >
                         {item.icon}
@@ -131,7 +135,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     )}
 
                     {!isCollapsed && (
-                      <span className="tracking-tight truncate">
+                      <span className="font-medium tracking-tight truncate">
                         {item.label}
                       </span>
                     )}
@@ -143,8 +147,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </nav>
       </div>
 
-      {/* 🟢 Footer Perfil Clickeable Detección Automática */}
-      <div className="pt-3 border-t border-gray-100">
+      {/* 🟢 Footer Perfil Clickeable */}
+      <div className="pt-3 border-t border-gray-200/80 shrink-0">
         <Link
           href={profileHref}
           title={isCollapsed ? "Perfil" : undefined}
