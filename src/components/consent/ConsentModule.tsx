@@ -250,15 +250,26 @@ export default function ConsentsPage() {
     },
   ];
 
+  const TableSkeleton = () => (
+    <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-3xl p-6 space-y-4 animate-pulse">
+      <div className="h-6 bg-gray-200 dark:bg-slate-700 rounded-lg w-1/4 mb-6"></div>
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <div
+          key={i}
+          className="h-12 bg-gray-100 dark:bg-slate-700/50 rounded-2xl w-full"
+        ></div>
+      ))}
+    </div>
+  );
   return (
-    <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif]">
+    <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif] px-1 sm:px-0">
       {/* Header + Buscador + Filtros */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
             Gestión de Consentimientos
           </h1>
-          <p className="text-sm text-gray-500 font-medium">
+          <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">
             Control de firmas digitales y documentos de consentimiento
             informado.
           </p>
@@ -269,7 +280,7 @@ export default function ConsentsPage() {
           <div className="w-full sm:w-44">
             <Select
               value={statusFilter}
-              onChange={(e) =>
+              onChange={(e: any) =>
                 setStatusFilter(
                   e.target.value as "Todos" | "Firmado" | "Pendiente",
                 )
@@ -284,29 +295,26 @@ export default function ConsentsPage() {
 
           {/* Buscador */}
           <div className="relative w-full sm:w-72">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-gray-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Buscar paciente, DUI o tutor..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-[#F8F9FA] border border-gray-200/80 rounded-2xl text-sm font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+              className="w-full pl-10 pr-4 py-2.5 bg-[#F8F9FA] dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-2xl text-sm font-medium text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 transition-all"
             />
           </div>
         </div>
       </div>
 
-      {/* Tabla de Consentimientos */}
+      {/* Tabla de Consentimientos o Skeleton Loader */}
       {isPageLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-          <Loader2 className="w-8 h-8 animate-spin mb-2 text-blue-600" />
-          <p className="text-sm font-medium">Cargando consentimientos...</p>
-        </div>
+        <TableSkeleton />
       ) : (
         <Table
           columns={consentColumns}
           data={filteredPatients}
-          keyExtractor={(patient) => patient.id}
+          keyExtractor={(patient: any) => patient.id}
           itemsPerPage={6}
           emptyMessage="No se encontraron consentimientos registrados."
         />
@@ -319,7 +327,7 @@ export default function ConsentsPage() {
           setIsConsentModalOpen(false);
           setTempSignature(null);
         }}
-        onSubmit={(e) => {
+        onSubmit={(e: any) => {
           e.preventDefault();
           if (tempSignature) {
             handleSaveSignature(tempSignature);
@@ -334,59 +342,60 @@ export default function ConsentsPage() {
       >
         {selectedPatient && (
           <div className="space-y-4">
-            <div className="p-3 bg-blue-50 border border-blue-100 rounded-2xl text-xs text-blue-900">
+            <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-800/50 rounded-2xl text-xs text-blue-900 dark:text-blue-200">
               <p className="font-bold">
                 {selectedPatient.isMinor && selectedPatient.tutor
                   ? `Firma requerida del Tutor Legal: ${selectedPatient.tutor.name} (${selectedPatient.tutor.relationship})`
                   : `Firma requerida del Paciente: ${selectedPatient.name}`}
               </p>
-              <p className="text-[11px] text-blue-700 mt-0.5">
+              <p className="text-[11px] text-blue-700 dark:text-blue-300 mt-0.5">
                 Pase la pantalla/tablet al declarante para que realice su firma
                 digital.
               </p>
             </div>
 
             <SignaturePad
-              onSignatureChange={(signature) => setTempSignature(signature)}
+              onSignatureChange={(signature: any) =>
+                setTempSignature(signature)
+              }
             />
           </div>
         )}
       </Modal>
 
-      {/* 👁️ MODAL VER DETALLES (SOLO LECTURA, SIN BOTÓN DE GUARDAR) */}
+      {/* 👁️ MODAL VER DETALLES (SOLO LECTURA) */}
       <Modal
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
         title="Detalles del Consentimiento"
         cancelText="Cerrar"
-        /* Omitimos submitText y onSubmit para que actúe solo como modal de visualización */
       >
         {selectedPatient && (
-          <div className="space-y-4 text-sm text-gray-700">
-            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200/60 flex items-center justify-between">
+          <div className="space-y-4 text-sm text-gray-700 dark:text-slate-300">
+            <div className="p-4 bg-gray-50 dark:bg-slate-800/80 rounded-2xl border border-gray-200/60 dark:border-slate-700/80 flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-gray-900">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                   {selectedPatient.name}
                 </h3>
-                <span className="text-xs text-gray-500 font-medium">
+                <span className="text-xs text-gray-500 dark:text-slate-400 font-medium">
                   Género: {selectedPatient.gender}
                 </span>
               </div>
               <span
                 className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
                   selectedPatient.consentStatus === "Firmado"
-                    ? "bg-blue-50 text-blue-700 border border-blue-200/60"
-                    : "bg-amber-50 text-amber-700 border border-amber-200/60"
+                    ? "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50"
+                    : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/50"
                 }`}
               >
                 {selectedPatient.consentStatus === "Firmado" ? (
                   <>
-                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                     Firmado
                   </>
                 ) : (
                   <>
-                    <Clock className="w-3.5 h-3.5 text-amber-600" />
+                    <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                     Pendiente
                   </>
                 )}
@@ -394,22 +403,22 @@ export default function ConsentsPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-white border border-gray-200/80 rounded-xl space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
+              <div className="p-3 bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-xl space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-slate-400 font-medium">
                   <Calendar className="w-3.5 h-3.5" />
                   <span>Fecha Registro/Firma</span>
                 </div>
-                <p className="font-semibold text-gray-800">
+                <p className="font-semibold text-gray-800 dark:text-slate-100">
                   {selectedPatient.consentDate || "Aún no firmado"}
                 </p>
               </div>
 
-              <div className="p-3 bg-white border border-gray-200/80 rounded-xl space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
+              <div className="p-3 bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-xl space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-slate-400 font-medium">
                   <IdCard className="w-3.5 h-3.5" />
                   <span>DUI / Identificación</span>
                 </div>
-                <p className="font-semibold text-gray-800">
+                <p className="font-semibold text-gray-800 dark:text-slate-100">
                   {selectedPatient.isMinor
                     ? selectedPatient.tutor
                       ? `Tutor: ${selectedPatient.tutor.dui}`
@@ -420,22 +429,22 @@ export default function ConsentsPage() {
             </div>
 
             {selectedPatient.consentSignature ? (
-              <div className="p-3 bg-white border border-gray-200/80 rounded-xl space-y-2">
-                <span className="text-xs font-bold text-gray-500">
+              <div className="p-3 bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-xl space-y-2">
+                <span className="text-xs font-bold text-gray-500 dark:text-slate-400">
                   Firma Digital Registrada:
                 </span>
-                <div className="p-2 bg-gray-50 rounded-lg border border-gray-100 flex justify-center">
+                <div className="p-2 bg-gray-50 dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-700 flex justify-center">
                   <img
                     src={selectedPatient.consentSignature}
                     alt="Firma Digital"
-                    className="h-20 object-contain"
+                    className="h-20 object-contain dark:invert"
                   />
                 </div>
               </div>
             ) : (
-              <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl text-xs text-amber-800">
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50 rounded-xl text-xs text-amber-800 dark:text-amber-200">
                 <p className="font-semibold">Sin firma registrada</p>
-                <p className="text-[11px] text-amber-600 mt-0.5">
+                <p className="text-[11px] text-amber-600 dark:text-amber-300 mt-0.5">
                   Este paciente aún no ha completado la firma del consentimiento
                   informado.
                 </p>

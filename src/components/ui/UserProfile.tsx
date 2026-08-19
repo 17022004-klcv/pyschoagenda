@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import {
   User,
@@ -27,7 +27,8 @@ export interface UserProfileData {
 }
 
 interface UserProfileProps {
-  user: UserProfileData;
+  user: UserProfileData | null;
+  isPageLoading?: boolean;
   onSave?: (
     updatedData: Partial<UserProfileData> & {
       password?: string;
@@ -37,14 +38,52 @@ interface UserProfileProps {
   onLogout?: () => Promise<void>;
 }
 
+// Subcomponente de Skeleton aislador para el renderizado condicional
+const ProfileSkeleton = () => (
+  <div className="space-y-6 animate-pulse max-w-4xl mx-auto px-1 sm:px-0">
+    <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6">
+      <div className="flex flex-col sm:flex-row items-center gap-6">
+        <div className="w-24 h-24 rounded-full bg-gray-200 dark:bg-slate-700"></div>
+        <div className="space-y-2 text-center sm:text-left">
+          <div className="h-6 bg-gray-200 dark:bg-slate-700 rounded-lg w-40"></div>
+          <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded-lg w-32"></div>
+          <div className="h-5 bg-gray-200 dark:bg-slate-700 rounded-full w-20"></div>
+        </div>
+      </div>
+      <div className="h-10 bg-gray-200 dark:bg-slate-700 rounded-2xl w-32"></div>
+    </div>
+    <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-3xl p-6 space-y-4">
+      <div className="h-5 bg-gray-200 dark:bg-slate-700 rounded w-1/4 mb-4"></div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="h-10 bg-gray-100 dark:bg-slate-700/50 rounded-2xl"></div>
+        <div className="h-10 bg-gray-100 dark:bg-slate-700/50 rounded-2xl"></div>
+      </div>
+    </div>
+  </div>
+);
+
 export const UserProfile: React.FC<UserProfileProps> = ({
   user,
+  isPageLoading = false,
   onSave,
   onLogout,
 }) => {
+  // 🟢 1. Renderizado condicional antes de manipular el objeto `user`
+  if (isPageLoading || !user) {
+    return <ProfileSkeleton />;
+  }
+
+  return <UserProfileForm user={user} onSave={onSave} onLogout={onLogout} />;
+};
+
+// Componente interno con los hooks de formulario asegurando que `user` NUNCA es null
+const UserProfileForm: React.FC<{
+  user: UserProfileData;
+  onSave?: UserProfileProps["onSave"];
+  onLogout?: UserProfileProps["onLogout"];
+}> = ({ user, onSave, onLogout }) => {
   const isGoogleUser = user.providerId === "google.com";
 
-  // 🟢 Declaración de estados y referencias que faltaban
   const [photoURL, setPhotoURL] = useState(user.photoURL || "");
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -60,11 +99,21 @@ export const UserProfile: React.FC<UserProfileProps> = ({
   const [loading, setLoading] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
+  // Sincronizar datos por si `user` cambia desde Firebase externamente
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      name: user.name || "",
+      email: user.email || "",
+      phone: user.phone || "",
+    }));
+    setPhotoURL(user.photoURL || "");
+  }, [user]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Manejo de la subida de imagen
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -76,14 +125,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({
 
     try {
       setUploadingPhoto(true);
-
-      // 1. Sube la foto a ImgBB y obtiene la URL
       const uploadedUrl = await uploadImageToImgBB(file);
-
-      // 2. Actualiza la vista
       setPhotoURL(uploadedUrl);
 
-      // 3. Guarda la nueva URL en Firebase
       if (onSave) {
         await onSave({ photoURL: uploadedUrl });
       }
@@ -163,8 +207,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif]">
-      {/* Input de archivo invisible */}
+    <div className="max-w-4xl mx-auto space-y-6 font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif] px-1 sm:px-0">
       <input
         type="file"
         ref={fileInputRef}
@@ -175,37 +218,35 @@ export const UserProfile: React.FC<UserProfileProps> = ({
 
       {/* HEADER */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
           Mi Perfil
         </h1>
-        <p className="text-sm text-gray-500 font-medium mt-1">
+        <p className="text-sm text-gray-500 dark:text-slate-400 font-medium mt-1">
           Gestiona tu información personal y opciones de seguridad.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* RESUMEN DE USUARIO */}
-        <div className="bg-white border border-gray-200/80 rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
             <div className="relative">
-              {/* Contenedor de la foto */}
-              <div className="w-24 h-24 rounded-full bg-blue-100 text-blue-600 font-bold text-3xl flex items-center justify-center border-4 border-white shadow-md overflow-hidden relative">
+              <div className="w-24 h-24 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-bold text-3xl flex items-center justify-center border-4 border-white dark:border-slate-800 shadow-md overflow-hidden relative">
                 {photoURL ? (
                   <Image
                     src={photoURL}
-                    alt={formData.name || "Foto de perfil"}
+                    alt={formData?.name || "Foto de perfil"}
                     fill
                     unoptimized
                     className="object-cover"
                   />
-                ) : formData.name ? (
+                ) : formData?.name ? (
                   formData.name.charAt(0).toUpperCase()
                 ) : (
                   "U"
                 )}
               </div>
 
-              {/* Botón flotante para abrir selector de fotos */}
               <button
                 type="button"
                 disabled={uploadingPhoto}
@@ -222,13 +263,15 @@ export const UserProfile: React.FC<UserProfileProps> = ({
             </div>
 
             <div className="space-y-1">
-              <h2 className="text-xl font-bold text-gray-900">
-                {formData.name || "Usuario"}
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                {formData?.name || "Usuario"}
               </h2>
-              <p className="text-sm text-gray-500 font-medium">{user.email}</p>
+              <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">
+                {user.email}
+              </p>
               <div className="pt-1">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-semibold border border-blue-200/60">
-                  <Shield className="w-3.5 h-3.5 text-blue-600" />
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 rounded-full text-xs font-semibold border border-blue-200/60 dark:border-blue-800/50">
+                  <Shield className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                   {user.role}
                 </span>
               </div>
@@ -239,7 +282,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({
             type="button"
             onClick={handleLogoutClick}
             disabled={loggingOut}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-red-50 text-red-600 hover:bg-red-100 border border-red-200/60 font-semibold text-xs transition-all cursor-pointer shrink-0"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/60 border border-red-200/60 dark:border-red-800/50 font-semibold text-xs transition-all cursor-pointer shrink-0"
           >
             {loggingOut ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -251,40 +294,40 @@ export const UserProfile: React.FC<UserProfileProps> = ({
         </div>
 
         {/* INFORMACIÓN PERSONAL */}
-        <div className="bg-white border border-gray-200/80 rounded-3xl p-6 shadow-sm space-y-4">
-          <h3 className="text-base font-bold text-gray-900 tracking-tight border-b border-gray-100 pb-3">
+        <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-3xl p-6 shadow-sm space-y-4">
+          <h3 className="text-base font-bold text-gray-900 dark:text-white tracking-tight border-b border-gray-100 dark:border-slate-700/60 pb-3">
             Información Personal
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="block text-xs font-bold text-gray-700">
+              <label className="block text-xs font-bold text-gray-700 dark:text-slate-300">
                 Nombre Completo
               </label>
               <div className="relative">
-                <User className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <User className="w-4 h-4 text-gray-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   name="name"
-                  value={formData.name}
+                  value={formData?.name || ""}
                   onChange={handleChange}
                   required
-                  className="w-full pl-10 pr-4 py-2.5 rounded-2xl border bg-gray-50 border-gray-200 text-sm font-medium focus:bg-white focus:border-blue-500 focus:outline-none transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-2xl border bg-gray-50 dark:bg-slate-900 border-gray-200 dark:border-slate-700 text-sm font-medium text-gray-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500 focus:outline-none transition-all"
                 />
               </div>
             </div>
 
             <div className="space-y-1">
-              <label className="block text-xs font-bold text-gray-700">
+              <label className="block text-xs font-bold text-gray-700 dark:text-slate-300">
                 Correo Electrónico
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Mail className="w-4 h-4 text-gray-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="email"
-                  value={formData.email}
+                  value={formData?.email || ""}
                   disabled
-                  className="w-full pl-10 pr-4 py-2.5 rounded-2xl border bg-gray-100 border-gray-200 text-sm font-medium text-gray-500 cursor-not-allowed"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-2xl border bg-gray-100 dark:bg-slate-900/50 border-gray-200 dark:border-slate-700 text-sm font-medium text-gray-500 dark:text-slate-500 cursor-not-allowed"
                 />
               </div>
             </div>
@@ -292,14 +335,14 @@ export const UserProfile: React.FC<UserProfileProps> = ({
         </div>
 
         {/* SEGURIDAD Y VINCULACIÓN */}
-        <div className="bg-white border border-gray-200/80 rounded-3xl p-6 shadow-sm space-y-4">
-          <h3 className="text-base font-bold text-gray-900 tracking-tight border-b border-gray-100 pb-3">
+        <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-3xl p-6 shadow-sm space-y-4">
+          <h3 className="text-base font-bold text-gray-900 dark:text-white tracking-tight border-b border-gray-100 dark:border-slate-700/60 pb-3">
             Seguridad y Acceso
           </h3>
 
           {isGoogleUser && (
-            <div className="flex items-start gap-3 p-4 bg-blue-50/60 border border-blue-200/60 rounded-2xl text-blue-800 text-xs font-medium mb-4">
-              <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 p-4 bg-blue-50/60 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-800/50 rounded-2xl text-blue-800 dark:text-blue-200 text-xs font-medium mb-4">
+              <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
               <p>
                 Iniciaste sesión con <strong>Google</strong>. Puedes asignar una
                 contraseña a continuación si también deseas poder entrar usando
@@ -310,35 +353,35 @@ export const UserProfile: React.FC<UserProfileProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="block text-xs font-bold text-gray-700">
+              <label className="block text-xs font-bold text-gray-700 dark:text-slate-300">
                 {isGoogleUser ? "Asignar Contraseña Local" : "Nueva Contraseña"}
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Lock className="w-4 h-4 text-gray-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="password"
                   name="newPassword"
                   placeholder="Mínimo 6 caracteres"
-                  value={formData.newPassword}
+                  value={formData?.newPassword || ""}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-2xl border bg-gray-50 border-gray-200 text-sm font-medium focus:bg-white focus:border-blue-500 focus:outline-none transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-2xl border bg-gray-50 dark:bg-slate-900 border-gray-200 dark:border-slate-700 text-sm font-medium text-gray-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500 focus:outline-none transition-all"
                 />
               </div>
             </div>
 
             <div className="space-y-1">
-              <label className="block text-xs font-bold text-gray-700">
+              <label className="block text-xs font-bold text-gray-700 dark:text-slate-300">
                 Confirmar Contraseña
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Lock className="w-4 h-4 text-gray-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="password"
                   name="confirmPassword"
                   placeholder="Repite la contraseña"
-                  value={formData.confirmPassword}
+                  value={formData?.confirmPassword || ""}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-2xl border bg-gray-50 border-gray-200 text-sm font-medium focus:bg-white focus:border-blue-500 focus:outline-none transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-2xl border bg-gray-50 dark:bg-slate-900 border-gray-200 dark:border-slate-700 text-sm font-medium text-gray-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500 focus:outline-none transition-all"
                 />
               </div>
             </div>

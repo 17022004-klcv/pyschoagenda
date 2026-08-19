@@ -467,28 +467,40 @@ export default function PatientsPage() {
     },
   ];
 
+  const TableSkeleton = () => (
+    <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-3xl p-6 space-y-4 animate-pulse">
+      <div className="h-6 bg-gray-200 dark:bg-slate-700 rounded-lg w-1/4 mb-6"></div>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div
+          key={i}
+          className="h-12 bg-gray-100 dark:bg-slate-700/50 rounded-2xl w-full"
+        ></div>
+      ))}
+    </div>
+  );
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif]">
+    <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif] px-1 sm:px-0">
       {/* Header + Buscador */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
             Gestión de Pacientes
           </h1>
-          <p className="text-sm text-gray-500 font-medium">
+          <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">
             Listado general, administración de expedientes y consentimientos.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="relative flex-1 sm:w-72">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-gray-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Buscar por nombre, DUI o tutor..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-[#F8F9FA] border border-gray-200/80 rounded-2xl text-sm font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+              className="w-full pl-10 pr-4 py-2.5 bg-[#F8F9FA] dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-2xl text-sm font-medium text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 transition-all"
             />
           </div>
 
@@ -509,16 +521,14 @@ export default function PatientsPage() {
         </div>
       </div>
 
+      {/* Renderizado de Tabla o Skeleton */}
       {isPageLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-          <Loader2 className="w-8 h-8 animate-spin mb-2 text-blue-600" />
-          <p className="text-sm font-medium">Cargando pacientes...</p>
-        </div>
+        <TableSkeleton />
       ) : (
         <Table
           columns={patientColumns}
           data={filteredPatients}
-          keyExtractor={(patient) => patient.id}
+          keyExtractor={(patient: any) => patient.id}
           itemsPerPage={5}
           emptyMessage="No se encontraron pacientes registrados."
         />
@@ -531,7 +541,7 @@ export default function PatientsPage() {
           setIsConsentModalOpen(false);
           setTempSignature(null);
         }}
-        onSubmit={(e) => {
+        onSubmit={(e: any) => {
           e.preventDefault();
           if (tempSignature) {
             handleSaveSignature(tempSignature);
@@ -546,20 +556,22 @@ export default function PatientsPage() {
       >
         {selectedPatient && (
           <div className="space-y-4">
-            <div className="p-3 bg-blue-50 border border-blue-100 rounded-2xl text-xs text-blue-900">
+            <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-800/50 rounded-2xl text-xs text-blue-900 dark:text-blue-200">
               <p className="font-bold">
                 {selectedPatient.isMinor && selectedPatient.tutor
                   ? `Firma requerida del Tutor Legal: ${selectedPatient.tutor.name} (${selectedPatient.tutor.relationship})`
                   : `Firma requerida del Paciente: ${selectedPatient.name}`}
               </p>
-              <p className="text-[11px] text-blue-700 mt-0.5">
+              <p className="text-[11px] text-blue-700 dark:text-blue-300 mt-0.5">
                 Pase la pantalla/tablet al declarante para que realice su firma
                 digital.
               </p>
             </div>
 
             <SignaturePad
-              onSignatureChange={(signature) => setTempSignature(signature)}
+              onSignatureChange={(signature: any) =>
+                setTempSignature(signature)
+              }
             />
           </div>
         )}
@@ -573,51 +585,55 @@ export default function PatientsPage() {
         cancelText="Cerrar"
       >
         {selectedPatient && (
-          <div className="space-y-4 text-sm text-gray-700">
-            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200/60 flex items-center justify-between">
+          <div className="space-y-4 text-sm text-gray-700 dark:text-slate-300">
+            <div className="p-4 bg-gray-50 dark:bg-slate-800/80 rounded-2xl border border-gray-200/60 dark:border-slate-700/80 flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-gray-900">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                   {selectedPatient.name}
                 </h3>
-                <span className="text-xs text-gray-500 font-medium">
+                <span className="text-xs text-gray-500 dark:text-slate-400 font-medium">
                   Género: {selectedPatient.gender}
                 </span>
               </div>
               <span
-                className={`px-2.5 py-1 rounded-full text-xs font-bold ${selectedPatient.status === "Activo" ? "bg-emerald-50 text-emerald-700" : "bg-gray-200 text-gray-600"}`}
+                className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                  selectedPatient.status === "Activo"
+                    ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/50"
+                    : "bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-slate-300"
+                }`}
               >
                 {selectedPatient.status}
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-white border border-gray-200/80 rounded-xl space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
+              <div className="p-3 bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-xl space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-slate-400 font-medium">
                   <Calendar className="w-3.5 h-3.5" />
                   <span>Fecha de Nacimiento</span>
                 </div>
-                <p className="font-semibold text-gray-800">
+                <p className="font-semibold text-gray-800 dark:text-slate-100">
                   {selectedPatient.birthDate} ({selectedPatient.age} años)
                 </p>
               </div>
 
-              <div className="p-3 bg-white border border-gray-200/80 rounded-xl space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
+              <div className="p-3 bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-xl space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-slate-400 font-medium">
                   <IdCard className="w-3.5 h-3.5" />
                   <span>DUI</span>
                 </div>
-                <p className="font-semibold text-gray-800">
+                <p className="font-semibold text-gray-800 dark:text-slate-100">
                   {selectedPatient.dui || "N/A (Menor)"}
                 </p>
               </div>
             </div>
 
             {selectedPatient.observations && (
-              <div className="p-3 bg-blue-50/60 border border-blue-100 rounded-xl space-y-1">
-                <span className="text-xs font-bold text-blue-700">
+              <div className="p-3 bg-blue-50/60 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50 rounded-xl space-y-1">
+                <span className="text-xs font-bold text-blue-700 dark:text-blue-300">
                   Observaciones Médicas / Notas
                 </span>
-                <p className="text-xs text-gray-700">
+                <p className="text-xs text-gray-700 dark:text-slate-300">
                   {selectedPatient.observations}
                 </p>
               </div>
@@ -640,7 +656,7 @@ export default function PatientsPage() {
           label="Nombre Completo"
           placeholder="Ej: Sofía Martínez"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e: any) => setName(e.target.value)}
           required
         />
 
@@ -648,7 +664,7 @@ export default function PatientsPage() {
           <Select
             label="Género"
             value={gender}
-            onChange={(e) =>
+            onChange={(e: any) =>
               setGender(e.target.value as "Femenino" | "Masculino")
             }
             options={[
@@ -662,7 +678,7 @@ export default function PatientsPage() {
             type="date"
             max={todayString}
             value={birthDate}
-            onChange={(e) => setBirthDate(e.target.value)}
+            onChange={(e: any) => setBirthDate(e.target.value)}
             required
           />
         </div>
@@ -674,14 +690,14 @@ export default function PatientsPage() {
             disabled={isMinor}
             placeholder="00000000-0"
             value={isMinor ? "" : dui}
-            onChange={(e) => setDui(e.target.value)}
+            onChange={(e: any) => setDui(e.target.value)}
             required={!isMinor && birthDate !== ""}
           />
           <Input
             label="Teléfono"
             placeholder="0000-0000"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e: any) => setPhone(e.target.value)}
             required
           />
         </div>
@@ -692,12 +708,14 @@ export default function PatientsPage() {
             type="email"
             placeholder="correo@ejemplo.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e: any) => setEmail(e.target.value)}
           />
           <Select
             label="Estado"
             value={status}
-            onChange={(e) => setStatus(e.target.value as "Activo" | "Inactivo")}
+            onChange={(e: any) =>
+              setStatus(e.target.value as "Activo" | "Inactivo")
+            }
             options={[
               { label: "Activo", value: "Activo" },
               { label: "Inactivo", value: "Inactivo" },
@@ -706,9 +724,9 @@ export default function PatientsPage() {
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-gray-700 flex items-center justify-between">
+          <label className="text-xs font-semibold text-gray-700 dark:text-slate-300 flex items-center justify-between">
             <span>Observaciones Médicas / Recepción</span>
-            <span className="text-[10px] text-gray-400 font-normal">
+            <span className="text-[10px] text-gray-400 dark:text-slate-500 font-normal">
               (Opcional)
             </span>
           </label>
@@ -717,28 +735,28 @@ export default function PatientsPage() {
             placeholder="Escribe notas relevantes o antecedentes iniciales..."
             value={observations}
             onChange={(e) => setObservations(e.target.value)}
-            className="w-full p-3 bg-[#F8F9FA] border border-gray-200/80 rounded-2xl text-xs text-gray-800 font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-all resize-none"
+            className="w-full p-3 bg-[#F8F9FA] dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-2xl text-xs text-gray-800 dark:text-slate-100 font-medium focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 transition-all resize-none"
           />
         </div>
 
         {isMinor && (
-          <div className="mt-4 p-4 bg-[#9A0076]/5 border border-[#9A0076]/20 rounded-2xl space-y-3 animate-in fade-in duration-200">
-            <div className="flex items-center gap-2 text-[#9A0076] font-bold border-b border-[#9A0076]/15 pb-2">
-              <ShieldAlert className="w-4 h-4 text-[#9A0076]" />
+          <div className="mt-4 p-4 bg-[#9A0076]/5 dark:bg-[#9A0076]/10 border border-[#9A0076]/20 dark:border-[#9A0076]/30 rounded-2xl space-y-3 animate-in fade-in duration-200">
+            <div className="flex items-center gap-2 text-[#9A0076] dark:text-[#d651b7] font-bold border-b border-[#9A0076]/15 dark:border-[#9A0076]/30 pb-2">
+              <ShieldAlert className="w-4 h-4 text-[#9A0076] dark:text-[#d651b7]" />
               <span className="text-sm">Datos del Encargado / Tutor Legal</span>
             </div>
             <Input
               label="Nombre Completo del Responsable"
               placeholder="Ej: Mariana de Benítez"
               value={tutorName}
-              onChange={(e) => setTutorName(e.target.value)}
+              onChange={(e: any) => setTutorName(e.target.value)}
               required={isMinor}
             />
             <div className="grid grid-cols-2 gap-3">
               <Select
                 label="Parentesco"
                 value={tutorRelationship}
-                onChange={(e) => setTutorRelationship(e.target.value)}
+                onChange={(e: any) => setTutorRelationship(e.target.value)}
                 options={[
                   { label: "Seleccionar...", value: "" },
                   { label: "Madre", value: "Madre" },
@@ -753,7 +771,7 @@ export default function PatientsPage() {
                 label="DUI del Responsable"
                 placeholder="00000000-0"
                 value={tutorDui}
-                onChange={(e) => setTutorDui(e.target.value)}
+                onChange={(e: any) => setTutorDui(e.target.value)}
                 required={isMinor}
               />
             </div>
@@ -772,8 +790,8 @@ export default function PatientsPage() {
         isLoading={isLoading}
       >
         <div className="space-y-4">
-          <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-2xl text-blue-800 text-xs">
-            <FileText className="w-5 h-5 text-blue-600 shrink-0" />
+          <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-800/50 rounded-2xl text-blue-800 dark:text-blue-200 text-xs">
+            <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
             <p>
               Selecciona un filtro para generar un documento PDF con la lista
               consolidada de pacientes.
@@ -782,7 +800,7 @@ export default function PatientsPage() {
           <Select
             label="Filtrar por Género"
             value={downloadGenderFilter}
-            onChange={(e) =>
+            onChange={(e: any) =>
               setDownloadGenderFilter(
                 e.target.value as "Todos" | "Femenino" | "Masculino",
               )

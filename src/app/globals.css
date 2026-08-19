@@ -1,12 +1,23 @@
 @import "tailwindcss";
 
-body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
-    "Helvetica Neue", sans-serif;
-}
+/* Definición de la variante oscura para Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --background: #f5f5f7;
   --foreground: #1d1d1f;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Helvetica Neue", sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* Transición suave para cuando cambies de modo claro a oscuro */
+.dark body {
+  --background: #0f172a;
+  --foreground: #f8fafc;
 }

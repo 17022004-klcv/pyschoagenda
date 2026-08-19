@@ -371,38 +371,69 @@ export default function AppointmentsPage() {
     },
   ];
 
+  // Skeleton para el modo Tabla
+  const TableSkeleton = () => (
+    <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-3xl p-6 space-y-4 animate-pulse">
+      <div className="h-6 bg-gray-200 dark:bg-slate-700 rounded-lg w-1/4 mb-6"></div>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div
+          key={i}
+          className="h-12 bg-gray-100 dark:bg-slate-700/50 rounded-2xl w-full"
+        ></div>
+      ))}
+    </div>
+  );
+
+  // Skeleton para el modo Calendario
+  const CalendarSkeleton = () => (
+    <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-3xl p-6 animate-pulse space-y-4">
+      <div className="flex justify-between items-center mb-6">
+        <div className="h-6 bg-gray-200 dark:bg-slate-700 rounded w-32"></div>
+        <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded-xl w-48"></div>
+      </div>
+      <div className="grid grid-cols-7 gap-2">
+        {[...Array(35)].map((_, i) => (
+          <div
+            key={i}
+            className="h-20 bg-gray-100 dark:bg-slate-700/40 rounded-xl"
+          ></div>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif]">
+    <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif] px-1 sm:px-0">
       {/* Header General */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4  rounded-2xl">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 rounded-2xl">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
             Gestión de Citas
           </h1>
-          <p className="text-sm text-gray-500 font-medium">
+          <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">
             Organiza tus consultas fácilmente.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           {/* Switch Tab (Tabla vs Calendario) */}
-          <div className="flex items-center p-1 bg-gray-100 rounded-xl border border-gray-200">
+          <div className="flex items-center p-1 bg-gray-100 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700">
             <button
               onClick={() => setViewMode("table")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 viewMode === "table"
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-gray-500 hover:text-gray-900"
+                  ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
+                  : "text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white"
               }`}
             >
               <List className="w-4 h-4" /> Lista
             </button>
             <button
               onClick={() => setViewMode("calendar")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 viewMode === "calendar"
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-gray-500 hover:text-gray-900"
+                  ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
+                  : "text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white"
               }`}
             >
               <CalendarIcon className="w-4 h-4" /> Calendario
@@ -414,7 +445,7 @@ export default function AppointmentsPage() {
               <div className="w-full sm:w-44">
                 <Select
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
+                  onChange={(e: any) => setStatusFilter(e.target.value)}
                   options={[
                     { label: "Todos los Estados", value: "Todos" },
                     { label: "Programadas", value: "Programada" },
@@ -424,13 +455,13 @@ export default function AppointmentsPage() {
                 />
               </div>
               <div className="relative w-full sm:w-52">
-                <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Search className="w-4 h-4 text-gray-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   placeholder="Buscar..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-[#F8F9FA] border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500"
+                  className="w-full pl-10 pr-4 py-2.5 bg-[#F8F9FA] dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-sm font-medium text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
             </>
@@ -438,7 +469,7 @@ export default function AppointmentsPage() {
 
           <button
             onClick={() => handleOpenAddModal()}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white font-semibold rounded-xl text-sm hover:bg-blue-700 transition-all cursor-pointer"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-semibold rounded-xl text-sm transition-all cursor-pointer shadow-sm"
           >
             <Plus className="w-4 h-4" /> Agendar Cita
           </button>
@@ -447,16 +478,17 @@ export default function AppointmentsPage() {
 
       {/* Renderizado Condicional de Componentes */}
       {isPageLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-          <Loader2 className="w-8 h-8 animate-spin mb-2 text-blue-600" />
-          <p className="text-sm font-medium">Cargando citas...</p>
-        </div>
+        viewMode === "table" ? (
+          <TableSkeleton />
+        ) : (
+          <CalendarSkeleton />
+        )
       ) : viewMode === "table" ? (
         /* COMPONENTE 1: TABLA */
         <Table
           columns={appointmentColumns}
           data={filteredAppointments}
-          keyExtractor={(app) => app.id}
+          keyExtractor={(app: any) => app.id}
           itemsPerPage={6}
         />
       ) : (
@@ -465,7 +497,7 @@ export default function AppointmentsPage() {
           appointments={appointments}
           onAddClick={handleOpenAddModal}
           onEditClick={handleOpenEditModal}
-          onViewClick={(app) => {
+          onViewClick={(app: any) => {
             setSelectedAppointment(app);
             setIsViewModalOpen(true);
           }}
@@ -486,18 +518,18 @@ export default function AppointmentsPage() {
         <div className="space-y-4">
           {/* Tipo de Terapia */}
           <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+            <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase mb-1">
               Tipo Terapia
             </label>
             <Select
               value={formData.therapyType}
-              onChange={(e) => {
-                const newTherapy = e.target.value as TherapyType;
+              onChange={(e: any) => {
+                const newTherapy = e.target.value;
                 setFormData({
                   ...formData,
                   therapyType: newTherapy,
                 });
-                // Si cambia a Individual, recortamos la selección solo al primer paciente
+
                 const isMulti = [
                   "Terapia de Pareja",
                   "Terapia Familiar",
@@ -507,14 +539,17 @@ export default function AppointmentsPage() {
                   setSelectedPatientIds([selectedPatientIds[0]]);
                 }
               }}
-              options={THERAPY_OPTIONS.map((t) => ({ label: t, value: t }))}
+              options={THERAPY_OPTIONS.map((t: string) => ({
+                label: t,
+                value: t,
+              }))}
             />
           </div>
 
-          {/* 👥 SECCIÓN DE PACIENTES DINÁMICA */}
+          {/* SECCIÓN DE PACIENTES DINÁMICA */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-bold text-gray-700 uppercase">
+              <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase">
                 {[
                   "Terapia de Pareja",
                   "Terapia Familiar",
@@ -533,7 +568,7 @@ export default function AppointmentsPage() {
                   onClick={() =>
                     setSelectedPatientIds([...selectedPatientIds, ""])
                   }
-                  className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
+                  className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" /> Agregar Paciente
                 </button>
@@ -541,19 +576,19 @@ export default function AppointmentsPage() {
             </div>
 
             <div className="space-y-2">
-              {selectedPatientIds.map((currentId, index) => (
+              {selectedPatientIds.map((currentId: string, index: number) => (
                 <div key={index} className="flex items-center gap-2">
                   <div className="flex-1">
                     <Select
                       value={currentId}
-                      onChange={(e) => {
+                      onChange={(e: any) => {
                         const updated = [...selectedPatientIds];
                         updated[index] = e.target.value;
                         setSelectedPatientIds(updated);
                       }}
                       options={[
                         { label: "-- Seleccionar Paciente --", value: "" },
-                        ...patientsList.map((p) => ({
+                        ...patientsList.map((p: any) => ({
                           label: p.name,
                           value: p.id,
                         })),
@@ -561,17 +596,16 @@ export default function AppointmentsPage() {
                     />
                   </div>
 
-                  {/* Botón para remover paciente adicional (si hay más de 1) */}
                   {selectedPatientIds.length > 1 && (
                     <button
                       type="button"
                       onClick={() => {
                         const updated = selectedPatientIds.filter(
-                          (_, i) => i !== index,
+                          (_: any, i: number) => i !== index,
                         );
                         setSelectedPatientIds(updated);
                       }}
-                      className="p-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-colors cursor-pointer"
+                      className="p-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 rounded-xl transition-colors cursor-pointer"
                       title="Eliminar paciente"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -585,7 +619,7 @@ export default function AppointmentsPage() {
           {/* Fecha y Hora */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+              <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase mb-1">
                 Fecha
               </label>
               <input
@@ -596,11 +630,11 @@ export default function AppointmentsPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, date: e.target.value })
                 }
-                className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-gray-200 rounded-2xl text-sm font-medium focus:outline-none focus:border-blue-500"
+                className="w-full px-3.5 py-2.5 bg-[#F8F9FA] dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-sm font-medium text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+              <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase mb-1">
                 Hora
               </label>
               <input
@@ -610,25 +644,28 @@ export default function AppointmentsPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, time: e.target.value })
                 }
-                className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-gray-200 rounded-2xl text-sm font-medium focus:outline-none focus:border-blue-500"
+                className="w-full px-3.5 py-2.5 bg-[#F8F9FA] dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-sm font-medium text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
               />
             </div>
           </div>
 
           {/* Estado */}
           <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+            <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase mb-1">
               Estado
             </label>
             <Select
               value={formData.status}
-              onChange={(e) =>
+              onChange={(e: any) =>
                 setFormData({
                   ...formData,
-                  status: e.target.value as AppointmentStatus,
+                  status: e.target.value,
                 })
               }
-              options={STATUS_OPTIONS.map((st) => ({ label: st, value: st }))}
+              options={STATUS_OPTIONS.map((st: string) => ({
+                label: st,
+                value: st,
+              }))}
             />
           </div>
         </div>
@@ -642,30 +679,34 @@ export default function AppointmentsPage() {
         cancelText="Cerrar"
       >
         {selectedAppointment && (
-          <div className="space-y-4 text-sm text-gray-700">
-            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 flex items-center justify-between">
+          <div className="space-y-4 text-sm text-gray-700 dark:text-slate-300">
+            <div className="p-4 bg-gray-50 dark:bg-slate-800/80 rounded-2xl border border-gray-200 dark:border-slate-700 flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-gray-900">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                   {selectedAppointment.patientNames?.join(", ")}
                 </h3>
-                <span className="text-xs text-gray-500 font-medium">
+                <span className="text-xs text-gray-500 dark:text-slate-400 font-medium">
                   {selectedAppointment.therapyType}
                 </span>
               </div>
-              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/50">
                 {selectedAppointment.status}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-white border border-gray-200 rounded-xl">
-                <span className="text-xs text-gray-400 font-medium">Fecha</span>
-                <p className="font-semibold text-gray-800">
+              <div className="p-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl">
+                <span className="text-xs text-gray-400 dark:text-slate-400 font-medium">
+                  Fecha
+                </span>
+                <p className="font-semibold text-gray-800 dark:text-slate-100">
                   {selectedAppointment.date}
                 </p>
               </div>
-              <div className="p-3 bg-white border border-gray-200 rounded-xl">
-                <span className="text-xs text-gray-400 font-medium">Hora</span>
-                <p className="font-semibold text-gray-800">
+              <div className="p-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl">
+                <span className="text-xs text-gray-400 dark:text-slate-400 font-medium">
+                  Hora
+                </span>
+                <p className="font-semibold text-gray-800 dark:text-slate-100">
                   {selectedAppointment.time} HS
                 </p>
               </div>
