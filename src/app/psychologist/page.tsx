@@ -206,81 +206,103 @@ export default function RecepcionistPage() {
     }
   };
 
-  return (
-    <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif]">
+  // 🟢 Componente Skeleton para las tarjetas KPI (Stats)
+const StatCardSkeleton = () => (
+  <div className="p-5 rounded-3xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 shadow-sm animate-pulse space-y-3">
+    <div className="flex items-center justify-between">
+      <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-24"></div>
+      <div className="h-6 w-16 bg-gray-200 dark:bg-slate-700 rounded-full"></div>
+    </div>
+    <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded w-16 mt-2"></div>
+  </div>
+);
+
+const TableRowSkeleton = () => (
+  <tr className="animate-pulse">
+    <td className="py-4 px-6"><div className="h-6 bg-gray-100 dark:bg-slate-700 rounded-lg w-20"></div></td>
+    <td className="py-4 px-6"><div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-40"></div></td>
+    <td className="py-4 px-6"><div className="h-4 bg-gray-100 dark:bg-slate-700 rounded w-24"></div></td>
+    <td className="py-4 px-6"><div className="h-6 bg-gray-100 dark:bg-slate-700 rounded-full w-24"></div></td>
+    <td className="py-4 px-6 text-right"><div className="h-8 bg-gray-200 dark:bg-slate-700 rounded-xl w-32 ml-auto"></div></td>
+  </tr>
+);
+return (
+    <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif] px-1 sm:px-0">
       {/* HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
             Inicio
           </h1>
-          <p className="text-sm text-gray-500 font-medium mt-1">
+          <p className="text-sm text-gray-500 dark:text-slate-400 font-medium mt-1">
             Gestión de citas programadas y resumen de la agenda.
           </p>
         </div>
       </div>
 
-      {/* KPIS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <StatCard
-          title="Citas de Hoy"
-          value={todayAppointments.length}
-          badgeText="Hoy"
-          badgeColor="blue"
-          icon={<CalendarDays className="w-6 h-6" />}
-        />
+      {/* KPIS - Responsivo: 1 col móvil, 2 cols sm, 3 cols md (iPad) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
+        {loading ? (
+          <>
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+          </>
+        ) : (
+          <>
+            <StatCard
+              title="Citas de Hoy"
+              value={todayAppointments.length}
+              badgeText="Hoy"
+              badgeColor="blue"
+              icon={<CalendarDays className="w-6 h-6" />}
+            />
 
-        <StatCard
-          title="Citas de Mañana"
-          value={tomorrowAppointments.length}
-          badgeText="Siguiente día"
-          badgeColor="purple"
-          icon={<CalendarCheck className="w-6 h-6" />}
-        />
+            <StatCard
+              title="Citas de Mañana"
+              value={tomorrowAppointments.length}
+              badgeText="Siguiente día"
+              badgeColor="purple"
+              icon={<CalendarCheck className="w-6 h-6" />}
+            />
 
-        <StatCard
-          title="Total de la Semana"
-          value={weekAppointments.length}
-          badgeText="Semana actual"
-          badgeColor="emerald"
-          icon={<CalendarRange className="w-6 h-6" />}
-        />
+            <StatCard
+              title="Total de la Semana"
+              value={weekAppointments.length}
+              badgeText="Semana actual"
+              badgeColor="emerald"
+              icon={<CalendarRange className="w-6 h-6" />}
+            />
+          </>
+        )}
       </div>
 
-      {/* TABLA DE CITAS PROGRAMADAS DEL DÍA */}
-      <div className="bg-white border border-gray-200/80 rounded-3xl shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+      {/* TABLA DE CITAS PROGRAMADAS DEL DÍA - Adaptada para Dark Mode y Responsividad */}
+      <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-3xl shadow-sm overflow-hidden transition-colors duration-200">
+        <div className="p-5 md:p-6 border-b border-gray-100 dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold text-gray-900 tracking-tight">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight">
               Citas Programadas de Hoy
             </h2>
-            <p className="text-xs text-gray-400 font-medium">
+            <p className="text-xs text-gray-400 dark:text-slate-500 font-medium mt-0.5">
               Solo se muestran los pacientes programados para el día de hoy
             </p>
           </div>
           {isUpdating && (
-            <span className="flex items-center gap-1.5 text-xs text-blue-600 font-semibold bg-blue-50 px-3 py-1 rounded-xl">
+            <span className="self-start sm:self-auto flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-semibold bg-blue-50 dark:bg-blue-950/50 border border-blue-200/50 dark:border-blue-800/50 px-3 py-1.5 rounded-xl">
               <Loader2 className="w-3.5 h-3.5 animate-spin" /> Guardando
               cambios...
             </span>
           )}
         </div>
 
-        {/* Tabla */}
+        {/* Tabla - Manejo de estados de carga y vacío */}
         {loading ? (
-          <div className="py-12 flex justify-center items-center text-gray-400 text-sm gap-2">
-            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-            <span>Cargando las citas del día...</span>
-          </div>
-        ) : sortedPendingAppointments.length === 0 ? (
-          <div className="py-12 text-center text-gray-500 font-medium text-sm">
-            🎉 ¡Excelente! No hay citas programadas por atender el día de hoy.
-          </div>
-        ) : (
+          // 🟢 Skeleton para la tabla
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50/70 border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                <tr className="bg-gray-50/70 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700/80 text-[11px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider">
                   <th className="py-3.5 px-6">Hora</th>
                   <th className="py-3.5 px-6">Paciente</th>
                   <th className="py-3.5 px-6">Tipo de Sesión</th>
@@ -288,34 +310,60 @@ export default function RecepcionistPage() {
                   <th className="py-3.5 px-6 text-right">Acción</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 text-sm">
+              <tbody className="divide-y divide-gray-100 dark:divide-slate-700/60">
+                <TableRowSkeleton />
+                <TableRowSkeleton />
+                <TableRowSkeleton />
+              </tbody>
+            </table>
+          </div>
+        ) : sortedPendingAppointments.length === 0 ? (
+          <div className="py-12 text-center text-gray-500 dark:text-slate-400 font-medium text-sm px-4">
+            🎉 ¡Excelente! No hay citas programadas por atender el día de hoy.
+          </div>
+        ) : (
+          // 📱💻 VISTA DE TABLA RESPONSIVA
+          <div className="overflow-x-auto">
+            {/* min-w asegura que en móviles se active el scroll horizontal, 
+                pero en iPads (md:min-w-full) ocupe todo el ancho si cabe */}
+            <table className="w-full text-left border-collapse min-w-[600px] md:min-w-full">
+              <thead>
+                <tr className="bg-gray-50/70 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700/80 text-[11px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider">
+                  <th className="py-3.5 px-6">Hora</th>
+                  <th className="py-3.5 px-6">Paciente</th>
+                  <th className="py-3.5 px-6">Tipo de Sesión</th>
+                  <th className="py-3.5 px-6">Estado</th>
+                  <th className="py-3.5 px-6 text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-slate-700/60 text-sm">
                 {sortedPendingAppointments.map((item: any) => (
                   <tr
                     key={item.id}
-                    className="hover:bg-gray-50/50 transition-colors duration-150"
+                    className="hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition-colors duration-150"
                   >
                     {/* Hora */}
-                    <td className="py-4 px-6 font-semibold text-gray-900 whitespace-nowrap">
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-mono">
-                        <Clock className="w-3.5 h-3.5 text-gray-400" />
+                    <td className="py-4 px-6 font-semibold text-gray-900 dark:text-white whitespace-nowrap">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg text-xs font-mono">
+                        <Clock className="w-3.5 h-3.5 text-gray-400 dark:text-slate-400" />
                         {item.time || item.hour || "00:00"}
                       </div>
                     </td>
 
                     {/* Paciente */}
-                    <td className="py-4 px-6 font-bold text-gray-900">
+                    <td className="py-4 px-6 font-bold text-gray-900 dark:text-white">
                       {getPatientDisplayName(item)}
                     </td>
 
                     {/* Tipo de Sesión */}
-                    <td className="py-4 px-6 text-gray-500 font-medium text-xs">
+                    <td className="py-4 px-6 text-gray-500 dark:text-slate-400 font-medium text-xs">
                       {getSessionType(item)}
                     </td>
 
                     {/* Estado */}
                     <td className="py-4 px-6 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-700 text-xs font-semibold rounded-full border border-amber-200/60">
-                        <Clock className="w-3.5 h-3.5 text-amber-600" />
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-xs font-semibold rounded-full border border-amber-200/60 dark:border-amber-800/50">
+                        <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                         Programada
                       </span>
                     </td>
@@ -327,7 +375,7 @@ export default function RecepcionistPage() {
                           handleStatusChange(item.id, "Completada")
                         }
                         disabled={isUpdating}
-                        className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-xl transition-all disabled:opacity-50 cursor-pointer inline-flex items-center gap-1"
+                        className="text-xs bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-xl transition-all disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5 shadow-sm active:scale-95"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         Marcar Completada
