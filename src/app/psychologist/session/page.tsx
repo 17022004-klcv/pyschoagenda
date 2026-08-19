@@ -175,15 +175,39 @@ export default function SessionPage() {
   }
 };
 
-  return (
-    <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif]">
+const SessionFormSkeleton = () => (
+  <div className="space-y-6 animate-pulse">
+    {/* Header Skeleton */}
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200 dark:border-slate-700/80">
+      <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded-lg w-1/3"></div>
+      <div className="h-8 bg-gray-100 dark:bg-slate-800 rounded-xl w-32"></div>
+    </div>
+
+    {/* Form Skeleton */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
+      <div className="h-10 bg-gray-100 dark:bg-slate-800 rounded-lg"></div>
+      <div className="h-10 bg-gray-100 dark:bg-slate-800 rounded-lg"></div>
+    </div>
+
+    <div className="h-20 bg-gray-100 dark:bg-slate-800 rounded-xl"></div>
+    <div className="h-10 bg-gray-100 dark:bg-slate-800 rounded-lg"></div>
+    <div className="h-24 bg-gray-100 dark:bg-slate-800 rounded-lg"></div>
+    <div className="h-24 bg-gray-100 dark:bg-slate-800 rounded-lg"></div>
+    
+    <div className="flex justify-end">
+      <div className="h-11 bg-gray-200 dark:bg-slate-700 rounded-2xl w-40"></div>
+    </div>
+  </div>
+);
+return (
+    <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif] px-1 sm:px-0">
       <div>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200">
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200 dark:border-slate-700/80">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
             Registro de Sesión
           </h1>
-          <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200 w-fit">
-            <Calendar className="w-4 h-4 text-blue-600" />
+          <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-slate-400 bg-gray-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-slate-700 w-fit">
+            <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <span>{currentDate}</span>
           </div>
         </div>
@@ -191,15 +215,15 @@ export default function SessionPage() {
         <form onSubmit={handleSubmit} className="space-y-6 pt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
-            {/* Lista Dinámica de Pacientes */}
+            {/* Lista Dinámica de Pacientes - Optimizada para iPads */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-700">Paciente(s)</label>
-              {formData.selectedPatients.map((patientId, index) => (
-                <div key={index} className="flex items-center gap-2">
+              <label className="text-xs font-bold text-gray-700 dark:text-slate-300">Paciente(s)</label>
+              {formData.selectedPatients.map((patientId: string, index: number) => (
+                <div key={index} className="flex items-center gap-2 transition-all duration-200 fade-in">
                   <div className="flex-1">
                     <Select
                       value={patientId}
-                      onChange={(e) => handlePatientChange(index, e.target.value)}
+                      onChange={(e: any) => handlePatientChange(index, e.target.value)}
                       options={patientOptions}
                     />
                   </div>
@@ -207,7 +231,7 @@ export default function SessionPage() {
                     <button
                       type="button"
                       onClick={() => handleRemovePatientSelect(index)}
-                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
                       title="Eliminar paciente"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -218,26 +242,26 @@ export default function SessionPage() {
               <button
                 type="button"
                 onClick={handleAddPatientSelect}
-                className="text-[11px] text-blue-600 font-semibold cursor-pointer hover:underline flex items-center gap-1 pt-0.5"
+                className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold cursor-pointer hover:underline flex items-center gap-1.5 pt-1 transition-colors"
               >
-                <Plus className="w-3 h-3" /> Agregar otro paciente
+                <Plus className="w-3.5 h-3.5" /> Agregar otro paciente
               </button>
             </div>
 
             {/* Tipo de Terapia */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-gray-700">
+              <label className="text-xs font-bold text-gray-700 dark:text-slate-300">
                 Tipo de Terapia
               </label>
               <Select
                 value={formData.therapyType}
-                onChange={(e) =>
+                onChange={(e: any) =>
                   setFormData({
                     ...formData,
-                    therapyType: e.target.value as TherapyType,
+                    therapyType: e.target.value,
                   })
                 }
-                options={THERAPY_OPTIONS.map((therapy) => ({
+                options={THERAPY_OPTIONS.map((therapy: string) => ({
                   value: therapy,
                   label: therapy,
                 }))}
@@ -245,9 +269,9 @@ export default function SessionPage() {
             </div>
           </div>
 
-          {/* Sección de Tutor Legal */}
-          <div className="p-4 bg-gray-50/70 border border-gray-200/60 rounded-xl space-y-3">
-            <div className="flex items-center space-x-2">
+          {/* Sección de Tutor Legal - Dark Mode */}
+          <div className="p-4 bg-gray-50/70 dark:bg-slate-800/80 border border-gray-200/80 dark:border-slate-700 rounded-xl space-y-3.5 transition-colors duration-200">
+            <div className="flex items-center space-x-2.5">
               <input
                 type="checkbox"
                 id="hasTutor"
@@ -255,21 +279,21 @@ export default function SessionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, hasTutor: e.target.checked })
                 }
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                className="w-4 h-4 text-blue-600 dark:text-blue-500 border-gray-300 dark:border-slate-600 rounded focus:ring-blue-500 dark:focus:ring-blue-600 focus:ring-offset-white dark:focus:ring-offset-slate-800 cursor-pointer"
               />
               <label
                 htmlFor="hasTutor"
-                className="text-xs font-semibold text-gray-700 cursor-pointer"
+                className="text-xs font-semibold text-gray-700 dark:text-slate-300 cursor-pointer select-none"
               >
                 ¿La sesión involucra o requiere tutor legal?
               </label>
             </div>
 
             {formData.hasTutor && (
-              <div className="pt-1">
+              <div className="pt-1 transition-all duration-300 fade-in">
                 <Select
                   value={formData.tutorName}
-                  onChange={(e) =>
+                  onChange={(e: any) =>
                     setFormData({ ...formData, tutorName: e.target.value })
                   }
                   options={tutorOptions}
@@ -280,13 +304,13 @@ export default function SessionPage() {
 
           {/* Tema Tratado */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-700">
+            <label className="text-xs font-bold text-gray-700 dark:text-slate-300">
               Tema Tratado
             </label>
             <Input
               placeholder="Ej. Manejo de ansiedad, duelo, dinámica familiar..."
               value={formData.theme}
-              onChange={(e) =>
+              onChange={(e: any) =>
                 setFormData({ ...formData, theme: e.target.value })
               }
             />
@@ -294,13 +318,13 @@ export default function SessionPage() {
 
           {/* Resumen de la Sesión */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-700">
+            <label className="text-xs font-bold text-gray-700 dark:text-slate-300">
               Resumen de la Sesión
             </label>
             <textarea
               rows={3}
               placeholder="Descripción objetiva de los hechos principales expuestos en la sesión..."
-              className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-blue-500 transition-all resize-none"
+              className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-100 font-medium placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-blue-500 transition-all resize-none"
               value={formData.summary}
               onChange={(e) =>
                 setFormData({ ...formData, summary: e.target.value })
@@ -310,13 +334,13 @@ export default function SessionPage() {
 
           {/* Análisis Clínico */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-700">
+            <label className="text-xs font-bold text-gray-700 dark:text-slate-300">
               Análisis Clínico
             </label>
             <textarea
               rows={3}
               placeholder="Evaluación psicológica profesional, observaciones y plan a seguir..."
-              className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-blue-500 transition-all resize-none"
+              className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-100 font-medium placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-blue-500 transition-all resize-none"
               value={formData.analysis}
               onChange={(e) =>
                 setFormData({ ...formData, analysis: e.target.value })
@@ -324,11 +348,11 @@ export default function SessionPage() {
             />
           </div>
 
-          {/* Botón Guardar */}
+          {/* Botón Guardar - Optimizada para iPads */}
           <div className="flex justify-end">
             <button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-2xl transition-all shadow-sm disabled:opacity-50 flex items-center gap-2 text-sm cursor-pointer"
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-semibold px-6 py-2.5 rounded-2xl transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 text-sm cursor-pointer active:scale-95 shadow-blue-500/10"
             >
               <Save className="w-4 h-4" />
               <span>Guardar Sesión</span>

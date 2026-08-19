@@ -441,82 +441,136 @@ export default function MedicalHistoryPage() {
     },
   ];
 
+  // Skeleton para los Filtros Superiores
+const HistoryFiltersSkeleton = () => (
+  <div className="flex flex-col md:flex-row items-end gap-3 bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200/80 dark:border-slate-700/80 shadow-sm animate-pulse">
+    <div className="w-full md:flex-1 space-y-1">
+      <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-28"></div>
+      <div className="h-10 bg-gray-100 dark:bg-slate-700/60 rounded-xl"></div>
+    </div>
+    <div className="w-full md:w-64 space-y-1">
+      <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-24"></div>
+      <div className="h-10 bg-gray-100 dark:bg-slate-700/60 rounded-xl"></div>
+    </div>
+    <div className="w-full md:w-40 space-y-1">
+      <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-16"></div>
+      <div className="h-10 bg-gray-100 dark:bg-slate-700/60 rounded-xl"></div>
+    </div>
+    <div className="w-full md:w-40 space-y-1">
+      <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-16"></div>
+      <div className="h-10 bg-gray-100 dark:bg-slate-700/60 rounded-xl"></div>
+    </div>
+    <div className="w-full md:w-auto">
+      <div className="h-10 bg-gray-200 dark:bg-slate-700 rounded-xl w-full md:w-44"></div>
+    </div>
+  </div>
+);
+
+// Skeleton para la Tabla
+const TableSkeleton = () => (
+  <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200/80 dark:border-slate-700/80 overflow-hidden animate-pulse">
+    <div className="p-4 border-b border-gray-100 dark:border-slate-700/80 bg-gray-50/50 dark:bg-slate-800/50 flex gap-4">
+      <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/6"></div>
+      <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/4"></div>
+      <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/5"></div>
+      <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/5"></div>
+      <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-12 ml-auto"></div>
+    </div>
+    {[1, 2, 3, 4, 5].map((i) => (
+      <div key={i} className="p-4 border-b border-gray-100 dark:border-slate-700/60 flex items-center gap-4">
+        <div className="h-4 bg-gray-100 dark:bg-slate-700/80 rounded w-1/6"></div>
+        <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/4"></div>
+        <div className="h-4 bg-gray-100 dark:bg-slate-700/80 rounded w-1/5"></div>
+        <div className="h-4 bg-gray-100 dark:bg-slate-700/80 rounded w-1/5"></div>
+        <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded-xl w-20 ml-auto"></div>
+      </div>
+    ))}
+  </div>
+);
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display',sans-serif]">
+    <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif] px-1 sm:px-0">
       {/* Encabezado */}
-      <div className="flex justify-between items-center pb-4 border-b border-gray-200">
-        <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-          <FileText className="w-5 h-5 text-blue-600" />
+      <div className="flex justify-between items-center pb-4 border-b border-gray-200 dark:border-slate-700/80">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 tracking-tight">
+          <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           Historial Clínico
         </h1>
       </div>
 
-      {/* Barra de Filtros y Botón de Opciones de Descarga */}
-      <div className="flex flex-col sm:flex-row items-end gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-        {/* Buscador por paciente / expediente (Select buscable) */}
-        <div className="w-full sm:flex-1">
-          <label className="block text-[11px] font-semibold text-gray-500 mb-1">
-            Paciente / Expediente
-          </label>
-          <Select
-            value={selectedExpedient}
-            onChange={(e) => setSelectedExpedient(e.target.value)}
-            options={patientExpedientOptions}
-            placeholder="Buscar por código o nombre..."
-            searchable={true}
-          />
-        </div>
+      {/* Barra de Filtros y Botón de Descarga */}
+      {loading ? (
+        <HistoryFiltersSkeleton />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-gray-200/80 dark:border-slate-700/80 shadow-sm transition-colors duration-200 items-end">
+          {/* Buscador Paciente / Expediente */}
+          <div className="lg:col-span-4">
+            <label className="block text-[11px] font-bold text-gray-600 dark:text-slate-400 mb-1">
+              Paciente / Expediente
+            </label>
+            <Select
+              value={selectedExpedient}
+              onChange={(e: any) => setSelectedExpedient(e.target.value)}
+              options={patientExpedientOptions}
+              placeholder="Buscar por código o nombre..."
+              searchable={true}
+            />
+          </div>
 
-        {/* Filtro de Tipo de Terapia */}
-        <div className="w-full sm:w-64">
-          <label className="block text-[11px] font-semibold text-gray-500 mb-1">
-            Tipo de Terapia
-          </label>
-          <Select
-            value={selectedTherapy}
-            onChange={(e) => setSelectedTherapy(e.target.value)}
-            options={THERAPY_OPTIONS}
-          />
-        </div>
+          {/* Filtro Tipo de Terapia */}
+          <div className="lg:col-span-3">
+            <label className="block text-[11px] font-bold text-gray-600 dark:text-slate-400 mb-1">
+              Tipo de Terapia
+            </label>
+            <Select
+              value={selectedTherapy}
+              onChange={(e: any) => setSelectedTherapy(e.target.value)}
+              options={THERAPY_OPTIONS}
+            />
+          </div>
 
-        {/* Filtro de Rango de Fechas */}
-        <div className="w-full sm:w-40">
-          <label className="block text-[11px] font-semibold text-gray-500 mb-1">
-            Desde
-          </label>
-          <input
-            type="date"
-            value={startDate}
-            max={endDate || undefined}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div className="w-full sm:w-40">
-          <label className="block text-[11px] font-semibold text-gray-500 mb-1">
-            Hasta
-          </label>
-          <input
-            type="date"
-            value={endDate}
-            min={startDate || undefined}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+          {/* Fecha Desde */}
+          <div className="lg:col-span-2">
+            <label className="block text-[11px] font-bold text-gray-600 dark:text-slate-400 mb-1">
+              Desde
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              max={endDate || undefined}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+            />
+          </div>
 
-        {/* Botón para Abrir Modal de Opciones de Descarga */}
-        <div className="w-full sm:w-auto">
-          <Button
-            onClick={() => setIsDownloadModalOpen(true)}
-            variant="secondary"
-            className="flex items-center gap-2 text-xs font-semibold px-4 py-2 text-gray-700 hover:bg-gray-50 border border-gray-300 w-full justify-center"
-          >
-            <Download className="w-4 h-4 text-blue-600" />
-            <span>Opciones de Descarga</span>
-          </Button>
+          {/* Fecha Hasta */}
+          <div className="lg:col-span-2">
+            <label className="block text-[11px] font-bold text-gray-600 dark:text-slate-400 mb-1">
+              Hasta
+            </label>
+            <input
+              type="date"
+              value={endDate}
+              min={startDate || undefined}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+            />
+          </div>
+
+          {/* Botón Descarga */}
+          <div className="sm:col-span-2 lg:col-span-1">
+            <Button
+              onClick={() => setIsDownloadModalOpen(true)}
+              variant="secondary"
+              className="flex items-center gap-2 text-xs font-semibold px-3 py-2 text-gray-700 dark:text-slate-200 bg-gray-50 dark:bg-slate-700/60 hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-300 dark:border-slate-600 w-full justify-center rounded-xl transition-all active:scale-95 cursor-pointer h-[38px]"
+            >
+              <Download className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+              <span className="hidden lg:inline">Descargar</span>
+              <span className="lg:hidden">Opciones Descarga</span>
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 🟢 MODAL DE DESCARGA DE EXPEDIENTES */}
       {isDownloadModalOpen && (
@@ -531,12 +585,12 @@ export default function MedicalHistoryPage() {
         >
           <div className="space-y-4 text-xs">
             <div>
-              <label className="block text-gray-700 font-bold mb-1">
+              <label className="block text-gray-700 dark:text-slate-300 font-bold mb-1">
                 Tipo de Reporte / Descarga
               </label>
               <Select
                 value={downloadScope}
-                onChange={(e) =>
+                onChange={(e: any) =>
                   setDownloadScope(e.target.value as "ALL" | "SPECIFIC")
                 }
                 options={[
@@ -553,44 +607,42 @@ export default function MedicalHistoryPage() {
               />
             </div>
 
-            {/* Si elige Expediente Específico, se muestra el Select de Pacientes */}
             {downloadScope === "SPECIFIC" && (
               <div>
-                <label className="block text-gray-700 font-bold mb-1">
+                <label className="block text-gray-700 dark:text-slate-300 font-bold mb-1">
                   Seleccionar Expediente / Paciente
                 </label>
                 <Select
                   value={selectedPatientExpedient}
-                  onChange={(e) => setSelectedPatientExpedient(e.target.value)}
-                  options={patientExpedientOptions.filter((o) => o.value)}
+                  onChange={(e: any) => setSelectedPatientExpedient(e.target.value)}
+                  options={patientExpedientOptions.filter((o: any) => o.value)}
                   placeholder="Buscar por código o nombre..."
                   searchable={true}
                 />
               </div>
             )}
 
-            <p className="text-gray-400 text-[11px]">
+            <p className="text-gray-400 dark:text-slate-500 text-[11px]">
               {sessionsToDownload.length} sesión(es) incluida(s) en el PDF. Usa
-              el botón &quot;Descargar PDF&quot; de arriba para generarlo y
-              descargarlo.
+              el botón &quot;Descargar PDF&quot; para generarlo.
             </p>
           </div>
         </ModalSheet>
       )}
 
-      {/* Tabla */}
+      {/* Tabla con Skeleton */}
       {loading ? (
-        <div className="bg-white p-8 text-center text-sm text-gray-500 rounded-2xl border border-gray-200">
-          Cargando historial clínico...
-        </div>
+        <TableSkeleton />
       ) : (
-        <Table
-          columns={columns}
-          data={filteredSessions}
-          keyExtractor={(item) => item.id || Math.random().toString()}
-          itemsPerPage={8}
-          emptyMessage="No se encontraron expedientes ni sesiones que coincidan con la búsqueda."
-        />
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200/80 dark:border-slate-700/80 overflow-hidden shadow-sm transition-colors duration-200">
+          <Table
+            columns={columns}
+            data={filteredSessions}
+            keyExtractor={(item: any) => item.id || Math.random().toString()}
+            itemsPerPage={8}
+            emptyMessage="No se encontraron expedientes ni sesiones que coincidan con la búsqueda."
+          />
+        </div>
       )}
 
       {/* 🟢 MODAL VER DETALLE */}
@@ -601,66 +653,66 @@ export default function MedicalHistoryPage() {
           title={`Detalle de Sesión - ${selectedSession.expedientCode || "N/A"}`}
           cancelText="Cerrar"
           submitText="Aceptar"
-          onSubmit={(e) => {
+          onSubmit={(e: any) => {
             e.preventDefault();
             setIsViewOpen(false);
           }}
         >
-          <div className="space-y-4 text-xs text-gray-700">
-            <div className="grid grid-cols-2 gap-3 bg-gray-50 p-3 rounded-2xl border border-gray-100">
+          <div className="space-y-4 text-xs text-gray-700 dark:text-slate-300">
+            <div className="grid grid-cols-2 gap-3 bg-gray-50 dark:bg-slate-800/80 p-3.5 rounded-2xl border border-gray-100 dark:border-slate-700">
               <div>
-                <span className="text-gray-400 font-medium block">
+                <span className="text-gray-400 dark:text-slate-500 font-medium block">
                   Paciente(s):
                 </span>
-                <span className="font-semibold text-gray-900">
+                <span className="font-semibold text-gray-900 dark:text-white">
                   {getPatientDisplayNames(selectedSession)}
                 </span>
               </div>
               <div>
-                <span className="text-gray-400 font-medium block">
+                <span className="text-gray-400 dark:text-slate-500 font-medium block">
                   Tipo de Terapia:
                 </span>
-                <span className="font-semibold text-blue-600">
+                <span className="font-semibold text-blue-600 dark:text-blue-400">
                   {selectedSession.therapyType}
                 </span>
               </div>
               <div>
-                <span className="text-gray-400 font-medium block">Fecha:</span>
-                <span className="font-semibold text-gray-800">
+                <span className="text-gray-400 dark:text-slate-500 font-medium block">Fecha:</span>
+                <span className="font-semibold text-gray-800 dark:text-slate-200">
                   {selectedSession.date}
                 </span>
               </div>
               <div>
-                <span className="text-gray-400 font-medium block">Código:</span>
-                <span className="font-semibold text-gray-800">
+                <span className="text-gray-400 dark:text-slate-500 font-medium block">Código:</span>
+                <span className="font-semibold text-gray-800 dark:text-slate-200">
                   {selectedSession.expedientCode || "N/A"}
                 </span>
               </div>
             </div>
 
             <div>
-              <span className="text-gray-500 font-bold block mb-1">
+              <span className="text-gray-500 dark:text-slate-400 font-bold block mb-1">
                 Tema Tratado:
               </span>
-              <p className="p-3 bg-white border border-gray-200 rounded-xl font-medium text-gray-800">
+              <p className="p-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl font-medium text-gray-800 dark:text-slate-200">
                 {selectedSession.theme || "Sin tema especificado"}
               </p>
             </div>
 
             <div>
-              <span className="text-gray-500 font-bold block mb-1">
+              <span className="text-gray-500 dark:text-slate-400 font-bold block mb-1">
                 Resumen de la Sesión:
               </span>
-              <p className="p-3 bg-white border border-gray-200 rounded-xl leading-relaxed whitespace-pre-wrap">
+              <p className="p-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl leading-relaxed whitespace-pre-wrap text-gray-800 dark:text-slate-200">
                 {selectedSession.summary || "Sin resumen registrado."}
               </p>
             </div>
 
             <div>
-              <span className="text-gray-500 font-bold block mb-1">
+              <span className="text-gray-500 dark:text-slate-400 font-bold block mb-1">
                 Análisis Clínico:
               </span>
-              <p className="p-3 bg-white border border-gray-200 rounded-xl leading-relaxed whitespace-pre-wrap">
+              <p className="p-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl leading-relaxed whitespace-pre-wrap text-gray-800 dark:text-slate-200">
                 {selectedSession.analysis || "Sin análisis registrado."}
               </p>
             </div>
@@ -680,62 +732,58 @@ export default function MedicalHistoryPage() {
           isLoading={isSaving}
         >
           <div className="space-y-4 text-xs">
-            {/* Datos no editables (Solo lectura) */}
-            <div className="grid grid-cols-2 gap-3 bg-gray-50 p-3 rounded-2xl border border-gray-100">
+            <div className="grid grid-cols-2 gap-3 bg-gray-50 dark:bg-slate-800/80 p-3 rounded-2xl border border-gray-100 dark:border-slate-700">
               <div>
-                <span className="text-gray-400 font-medium block">
+                <span className="text-gray-400 dark:text-slate-500 font-medium block">
                   Paciente:
                 </span>
-                <span className="font-semibold text-gray-800">
+                <span className="font-semibold text-gray-800 dark:text-slate-200">
                   {getPatientDisplayNames(selectedSession)}
                 </span>
               </div>
               <div>
-                <span className="text-gray-400 font-medium block">Fecha:</span>
-                <span className="font-semibold text-gray-800">
+                <span className="text-gray-400 dark:text-slate-500 font-medium block">Fecha:</span>
+                <span className="font-semibold text-gray-800 dark:text-slate-200">
                   {selectedSession.date}
                 </span>
               </div>
             </div>
 
-            {/* Select: Tipo de Terapia (Editable) */}
             <div>
-              <label className="block text-gray-700 font-bold mb-1">
+              <label className="block text-gray-700 dark:text-slate-300 font-bold mb-1">
                 Tipo de Terapia
               </label>
               <Select
                 value={editFormData.therapyType}
-                onChange={(e) =>
+                onChange={(e: any) =>
                   setEditFormData({
                     ...editFormData,
                     therapyType: e.target.value,
                   })
                 }
-                options={THERAPY_OPTIONS.filter((opt) => opt.value !== "TODAS")}
+                options={THERAPY_OPTIONS.filter((opt: any) => opt.value !== "TODAS")}
               />
             </div>
 
-            {/* Input: Tema Tratado (Editable) */}
             <div>
-              <label className="block text-gray-700 font-bold mb-1">
+              <label className="block text-gray-700 dark:text-slate-300 font-bold mb-1">
                 Tema Tratado
               </label>
               <Input
                 value={editFormData.theme}
-                onChange={(e) =>
+                onChange={(e: any) =>
                   setEditFormData({ ...editFormData, theme: e.target.value })
                 }
               />
             </div>
 
-            {/* Textarea: Resumen (Editable) */}
             <div>
-              <label className="block text-gray-700 font-bold mb-1">
+              <label className="block text-gray-700 dark:text-slate-300 font-bold mb-1">
                 Resumen de la Sesión
               </label>
               <textarea
                 rows={4}
-                className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+                className="w-full p-3 border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs transition-colors"
                 value={editFormData.summary}
                 onChange={(e) =>
                   setEditFormData({
@@ -746,14 +794,13 @@ export default function MedicalHistoryPage() {
               />
             </div>
 
-            {/* Textarea: Análisis Clínico (Editable) */}
             <div>
-              <label className="block text-gray-700 font-bold mb-1">
+              <label className="block text-gray-700 dark:text-slate-300 font-bold mb-1">
                 Análisis Clínico
               </label>
               <textarea
                 rows={4}
-                className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+                className="w-full p-3 border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs transition-colors"
                 value={editFormData.analysis}
                 onChange={(e) =>
                   setEditFormData({
