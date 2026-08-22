@@ -442,51 +442,54 @@ export default function MedicalHistoryPage() {
   ];
 
   // Skeleton para los Filtros Superiores
-const HistoryFiltersSkeleton = () => (
-  <div className="flex flex-col md:flex-row items-end gap-3 bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200/80 dark:border-slate-700/80 shadow-sm animate-pulse">
-    <div className="w-full md:flex-1 space-y-1">
-      <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-28"></div>
-      <div className="h-10 bg-gray-100 dark:bg-slate-700/60 rounded-xl"></div>
-    </div>
-    <div className="w-full md:w-64 space-y-1">
-      <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-24"></div>
-      <div className="h-10 bg-gray-100 dark:bg-slate-700/60 rounded-xl"></div>
-    </div>
-    <div className="w-full md:w-40 space-y-1">
-      <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-16"></div>
-      <div className="h-10 bg-gray-100 dark:bg-slate-700/60 rounded-xl"></div>
-    </div>
-    <div className="w-full md:w-40 space-y-1">
-      <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-16"></div>
-      <div className="h-10 bg-gray-100 dark:bg-slate-700/60 rounded-xl"></div>
-    </div>
-    <div className="w-full md:w-auto">
-      <div className="h-10 bg-gray-200 dark:bg-slate-700 rounded-xl w-full md:w-44"></div>
-    </div>
-  </div>
-);
-
-// Skeleton para la Tabla
-const TableSkeleton = () => (
-  <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200/80 dark:border-slate-700/80 overflow-hidden animate-pulse">
-    <div className="p-4 border-b border-gray-100 dark:border-slate-700/80 bg-gray-50/50 dark:bg-slate-800/50 flex gap-4">
-      <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/6"></div>
-      <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/4"></div>
-      <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/5"></div>
-      <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/5"></div>
-      <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-12 ml-auto"></div>
-    </div>
-    {[1, 2, 3, 4, 5].map((i) => (
-      <div key={i} className="p-4 border-b border-gray-100 dark:border-slate-700/60 flex items-center gap-4">
-        <div className="h-4 bg-gray-100 dark:bg-slate-700/80 rounded w-1/6"></div>
-        <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/4"></div>
-        <div className="h-4 bg-gray-100 dark:bg-slate-700/80 rounded w-1/5"></div>
-        <div className="h-4 bg-gray-100 dark:bg-slate-700/80 rounded w-1/5"></div>
-        <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded-xl w-20 ml-auto"></div>
+  const HistoryFiltersSkeleton = () => (
+    <div className="flex flex-col md:flex-row items-end gap-3 bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200/80 dark:border-slate-700/80 shadow-sm animate-pulse">
+      <div className="w-full md:flex-1 space-y-1">
+        <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-28"></div>
+        <div className="h-10 bg-gray-100 dark:bg-slate-700/60 rounded-xl"></div>
       </div>
-    ))}
-  </div>
-);
+      <div className="w-full md:w-64 space-y-1">
+        <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-24"></div>
+        <div className="h-10 bg-gray-100 dark:bg-slate-700/60 rounded-xl"></div>
+      </div>
+      <div className="w-full md:w-40 space-y-1">
+        <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-16"></div>
+        <div className="h-10 bg-gray-100 dark:bg-slate-700/60 rounded-xl"></div>
+      </div>
+      <div className="w-full md:w-40 space-y-1">
+        <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-16"></div>
+        <div className="h-10 bg-gray-100 dark:bg-slate-700/60 rounded-xl"></div>
+      </div>
+      <div className="w-full md:w-auto">
+        <div className="h-10 bg-gray-200 dark:bg-slate-700 rounded-xl w-full md:w-44"></div>
+      </div>
+    </div>
+  );
+
+  // Skeleton para la Tabla
+  const TableSkeleton = () => (
+    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200/80 dark:border-slate-700/80 overflow-hidden animate-pulse">
+      <div className="p-4 border-b border-gray-100 dark:border-slate-700/80 bg-gray-50/50 dark:bg-slate-800/50 flex gap-4">
+        <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/6"></div>
+        <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/4"></div>
+        <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/5"></div>
+        <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/5"></div>
+        <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-12 ml-auto"></div>
+      </div>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div
+          key={i}
+          className="p-4 border-b border-gray-100 dark:border-slate-700/60 flex items-center gap-4"
+        >
+          <div className="h-4 bg-gray-100 dark:bg-slate-700/80 rounded w-1/6"></div>
+          <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/4"></div>
+          <div className="h-4 bg-gray-100 dark:bg-slate-700/80 rounded w-1/5"></div>
+          <div className="h-4 bg-gray-100 dark:bg-slate-700/80 rounded w-1/5"></div>
+          <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded-xl w-20 ml-auto"></div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif] px-1 sm:px-0">
@@ -572,49 +575,101 @@ const TableSkeleton = () => (
         </div>
       )}
 
-      {/* 🟢 MODAL DE DESCARGA DE EXPEDIENTES */}
+      {/* 🟢 MODAL DE DESCARGA DE EXPEDIENTES REDISEÑADO */}
       {isDownloadModalOpen && (
         <ModalSheet
           isOpen={isDownloadModalOpen}
           onClose={() => setIsDownloadModalOpen(false)}
           onSubmit={handleDownloadExpedient}
-          title="Descargar Expedientes Clínicos"
+          title="Descargar Expediente Clínico"
           cancelText="Cancelar"
           submitText={isGeneratingPdf ? "Generando..." : "Descargar PDF"}
           isLoading={isGeneratingPdf}
         >
           <div className="space-y-4 text-xs">
             <div>
-              <label className="block text-gray-700 dark:text-slate-300 font-bold mb-1">
-                Tipo de Reporte / Descarga
+              <label className="block text-gray-700 dark:text-slate-300 font-bold mb-2">
+                Selecciona el alcance de la descarga
               </label>
-              <Select
-                value={downloadScope}
-                onChange={(e: any) =>
-                  setDownloadScope(e.target.value as "ALL" | "SPECIFIC")
-                }
-                options={[
-                  {
-                    label: "Todas las sesiones (Historial filtrado)",
-                    value: "ALL",
-                  },
-                  {
-                    label: "Expediente específico de un paciente",
-                    value: "SPECIFIC",
-                  },
-                ]}
-                searchable={false}
-              />
+
+              {/* Selector Visual de Alcance */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {/* Opción 1: Todas las Sesiones */}
+                <button
+                  type="button"
+                  onClick={() => setDownloadScope("ALL")}
+                  className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                    downloadScope === "ALL"
+                      ? "border-blue-500 bg-blue-50/50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-200 ring-2 ring-blue-500/20"
+                      : "border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-600 text-gray-700 dark:text-slate-300"
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full mb-1">
+                    <span className="font-bold text-xs">
+                      Todas las sesiones
+                    </span>
+                    <span
+                      className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                        downloadScope === "ALL"
+                          ? "border-blue-600 bg-blue-600"
+                          : "border-gray-300 dark:border-slate-600"
+                      }`}
+                    >
+                      {downloadScope === "ALL" && (
+                        <span className="w-1.5 h-1.5 bg-white rounded-full" />
+                      )}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 dark:text-slate-400">
+                    Incluye las consultas que coincidan con los filtros
+                    actuales.
+                  </p>
+                </button>
+
+                {/* Opción 2: Expediente Específico */}
+                <button
+                  type="button"
+                  onClick={() => setDownloadScope("SPECIFIC")}
+                  className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                    downloadScope === "SPECIFIC"
+                      ? "border-blue-500 bg-blue-50/50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-200 ring-2 ring-blue-500/20"
+                      : "border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-600 text-gray-700 dark:text-slate-300"
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full mb-1">
+                    <span className="font-bold text-xs">
+                      Expediente Específico
+                    </span>
+                    <span
+                      className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                        downloadScope === "SPECIFIC"
+                          ? "border-blue-600 bg-blue-600"
+                          : "border-gray-300 dark:border-slate-600"
+                      }`}
+                    >
+                      {downloadScope === "SPECIFIC" && (
+                        <span className="w-1.5 h-1.5 bg-white rounded-full" />
+                      )}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 dark:text-slate-400">
+                    Genera la ficha completa y privada de un único paciente.
+                  </p>
+                </button>
+              </div>
             </div>
 
+            {/* Select condicional para expediente específico */}
             {downloadScope === "SPECIFIC" && (
-              <div>
+              <div className="pt-2 animate-fadeIn">
                 <label className="block text-gray-700 dark:text-slate-300 font-bold mb-1">
                   Seleccionar Expediente / Paciente
                 </label>
                 <Select
                   value={selectedPatientExpedient}
-                  onChange={(e: any) => setSelectedPatientExpedient(e.target.value)}
+                  onChange={(e: any) =>
+                    setSelectedPatientExpedient(e.target.value)
+                  }
                   options={patientExpedientOptions.filter((o: any) => o.value)}
                   placeholder="Buscar por código o nombre..."
                   searchable={true}
@@ -622,10 +677,14 @@ const TableSkeleton = () => (
               </div>
             )}
 
-            <p className="text-gray-400 dark:text-slate-500 text-[11px]">
-              {sessionsToDownload.length} sesión(es) incluida(s) en el PDF. Usa
-              el botón &quot;Descargar PDF&quot; para generarlo.
-            </p>
+            {/* Indicador Informativo */}
+            <div className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl border border-gray-200/60 dark:border-slate-700/60 flex items-center gap-2 text-[11px] text-gray-600 dark:text-slate-400">
+              <FileText className="w-4 h-4 text-blue-500 shrink-0" />
+              <span>
+                <strong>{sessionsToDownload.length}</strong> sesión(es) será(n)
+                incluida(s) en este documento.
+              </span>
+            </div>
           </div>
         </ModalSheet>
       )}
@@ -677,13 +736,17 @@ const TableSkeleton = () => (
                 </span>
               </div>
               <div>
-                <span className="text-gray-400 dark:text-slate-500 font-medium block">Fecha:</span>
+                <span className="text-gray-400 dark:text-slate-500 font-medium block">
+                  Fecha:
+                </span>
                 <span className="font-semibold text-gray-800 dark:text-slate-200">
                   {selectedSession.date}
                 </span>
               </div>
               <div>
-                <span className="text-gray-400 dark:text-slate-500 font-medium block">Código:</span>
+                <span className="text-gray-400 dark:text-slate-500 font-medium block">
+                  Código:
+                </span>
                 <span className="font-semibold text-gray-800 dark:text-slate-200">
                   {selectedSession.expedientCode || "N/A"}
                 </span>
@@ -742,7 +805,9 @@ const TableSkeleton = () => (
                 </span>
               </div>
               <div>
-                <span className="text-gray-400 dark:text-slate-500 font-medium block">Fecha:</span>
+                <span className="text-gray-400 dark:text-slate-500 font-medium block">
+                  Fecha:
+                </span>
                 <span className="font-semibold text-gray-800 dark:text-slate-200">
                   {selectedSession.date}
                 </span>
@@ -761,7 +826,9 @@ const TableSkeleton = () => (
                     therapyType: e.target.value,
                   })
                 }
-                options={THERAPY_OPTIONS.filter((opt: any) => opt.value !== "TODAS")}
+                options={THERAPY_OPTIONS.filter(
+                  (opt: any) => opt.value !== "TODAS",
+                )}
               />
             </div>
 

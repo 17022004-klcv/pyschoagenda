@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { pdf } from "@react-pdf/renderer";
 import {
   Search,
@@ -20,6 +20,9 @@ import {
   FileSignature,
   CheckCircle2,
   Clock,
+  UserRound,
+  ChevronDown,
+  Users,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
@@ -39,13 +42,13 @@ import { ConsentPdfDocument } from "@/components/pdf/ConsentPdfDocument";
 export default function PatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [genderFilter, setGenderFilter] = useState<string>("Todos");
   const [isPageLoading, setIsPageLoading] = useState(true);
 
   // Modales
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
-  const [isConsentModalOpen, setIsConsentModalOpen] = useState(false); // 🟢 Modal Consentimiento
+  const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   // Estado de Selección / Edición
@@ -53,10 +56,9 @@ export default function PatientsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tempSignature, setTempSignature] = useState<string | null>(null);
 
-  // Filtro de Descarga General
-  const [downloadGenderFilter, setDownloadGenderFilter] = useState<
-    "Todos" | "Femenino" | "Masculino"
-  >("Todos");
+  // Filtro de Descarga General (Dropdown Flotante)
+  const [isPdfDropdownOpen, setIsPdfDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Formulario Paciente
   const [name, setName] = useState("");
@@ -92,6 +94,67 @@ export default function PatientsPage() {
     fetchPatients();
   }, [fetchPatients]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsPdfDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Filtro combinado de pacientes para la tabla
+  const filteredPatients = patients.filter((p) => {
+    const matchesSearch =
+      p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.dui && p.dui.includes(searchTerm)) ||
+      (p.tutor &&
+        p.tutor.name?.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesGender = genderFilter === "Todos" || p.gender === genderFilter;
+
+    return matchesSearch && matchesGender;
+  });
+
+  // Handlers para la descarga de PDF
+  const handleDownloadFilteredPDF = async (
+    filterType: "Todos" | "Femenino" | "Masculino",
+  ) => {
+    setIsPdfDropdownOpen(false);
+
+    try {
+      showAlert.successToast("Generando reporte PDF...");
+      let listToExport = patients;
+      let titleLabel = "Todos los Pacientes";
+
+      if (filterType !== "Todos") {
+        listToExport = patients.filter((p) => p.gender === filterType);
+        titleLabel = `Pacientes Género ${filterType}`;
+      }
+
+      const blob = await pdf(
+        <PatientListPdfDocument
+          patients={listToExport}
+          filterLabel={titleLabel}
+        />,
+      ).toBlob();
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Reporte_Pacientes_${filterType}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      showAlert.errorToast("Error al generar el reporte PDF");
+    }
+  };
+
   const calculateAge = (dateString: string) => {
     if (!dateString) return 0;
     const today = new Date();
@@ -106,14 +169,6 @@ export default function PatientsPage() {
 
   const calculatedAge = calculateAge(birthDate);
   const isMinor = birthDate !== "" && calculatedAge < 18;
-
-  const filteredPatients = patients.filter(
-    (p) =>
-      p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (p.dui && p.dui.includes(searchTerm)) ||
-      (p.tutor &&
-        p.tutor.name?.toLowerCase().includes(searchTerm.toLowerCase())),
-  );
 
   const handleOpenView = (patient: Patient) => {
     setSelectedPatient(patient);
@@ -202,7 +257,7 @@ export default function PatientsPage() {
       status,
       isMinor,
       observations: observations.trim() || undefined,
-      consentStatus: editingId ? undefined : ("Pendiente" as const), // Por defecto Pendiente
+      consentStatus: editingId ? undefined : ("Pendiente" as const),
       tutor: isMinor
         ? {
             name: tutorName,
@@ -221,7 +276,6 @@ export default function PatientsPage() {
         const created = await PatientService.create(patientData);
         showAlert.successToast("Paciente registrado exitosamente");
 
-        // Preguntar opcionalmente si desea hacer firmar el consentimiento de inmediato
         const confirmSign = await showAlert.confirm(
           "¿Firmar Consentimiento Ahora?",
           "¿Deseas pasar la tablet al paciente o tutor para firmar el consentimiento en este momento?",
@@ -280,50 +334,6 @@ export default function PatientsPage() {
       URL.revokeObjectURL(url);
     } catch (error) {
       showAlert.errorToast("Ocurrió un error al generar el PDF");
-    }
-  };
-
-  const handleDownloadReportPdf = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      showAlert.successToast("Generando Reporte PDF...");
-
-      const listToExport = patients.filter((p) => {
-        if (downloadGenderFilter === "Femenino") return p.gender === "Femenino";
-        if (downloadGenderFilter === "Masculino")
-          return p.gender === "Masculino";
-        return true;
-      });
-
-      const labelMap = {
-        Todos: "Todos los Pacientes",
-        Femenino: "Solo Pacientes Femeninos",
-        Masculino: "Solo Pacientes Masculinos",
-      };
-
-      const blob = await pdf(
-        <PatientListPdfDocument
-          patients={listToExport}
-          filterLabel={labelMap[downloadGenderFilter]}
-        />,
-      ).toBlob();
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Reporte_Pacientes_${downloadGenderFilter}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-
-      setIsDownloadModalOpen(false);
-    } catch (error) {
-      showAlert.errorToast("Error al generar el reporte PDF");
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -421,7 +431,6 @@ export default function PatientsPage() {
       align: "right",
       accessor: (patient) => (
         <div className="flex items-center justify-end gap-1">
-          {/* 🟢 Botón de Consentimiento */}
           <ActionButton
             icon={<FileSignature className="w-4 h-4" />}
             title={
@@ -504,13 +513,62 @@ export default function PatientsPage() {
             />
           </div>
 
-          <Button
-            variant="secondary"
-            onClick={() => setIsDownloadModalOpen(true)}
-            icon={<Download className="w-4 h-4" />}
-          >
-            Exportar PDF
-          </Button>
+          <div className="relative shrink-0" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsPdfDropdownOpen(!isPdfDropdownOpen)}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-gray-700 dark:text-slate-200 text-sm font-semibold transition-all cursor-pointer shadow-sm active:scale-95"
+            >
+              <FileText className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              <span>Exportar PDF</span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                  isPdfDropdownOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {/* Menú Desplegable Flotante */}
+            {isPdfDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="px-3 py-1.5 border-b border-gray-100 dark:border-slate-700/60">
+                  <p className="text-[11px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider">
+                    Alcance del Reporte
+                  </p>
+                </div>
+
+                {/* Opción Todos */}
+                <button
+                  type="button"
+                  onClick={() => handleDownloadFilteredPDF("Todos")}
+                  className="w-full text-left px-3.5 py-2 text-xs font-semibold text-gray-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-950/30 hover:text-purple-600 dark:hover:text-purple-400 flex items-center gap-2.5 transition-colors cursor-pointer"
+                >
+                  <Users className="w-4 h-4 text-purple-500" />
+                  <span>Todos los Pacientes</span>
+                </button>
+
+                {/* Opción Femenino */}
+                <button
+                  type="button"
+                  onClick={() => handleDownloadFilteredPDF("Femenino")}
+                  className="w-full text-left px-3.5 py-2 text-xs font-semibold text-gray-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-950/30 hover:text-purple-600 dark:hover:text-purple-400 flex items-center gap-2.5 transition-colors cursor-pointer"
+                >
+                  <UserRound className="w-4 h-4 text-purple-500" />
+                  <span>Solo Género Femenino</span>
+                </button>
+
+                {/* Opción Masculino */}
+                <button
+                  type="button"
+                  onClick={() => handleDownloadFilteredPDF("Masculino")}
+                  className="w-full text-left px-3.5 py-2 text-xs font-semibold text-gray-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-950/30 hover:text-purple-600 dark:hover:text-purple-400 flex items-center gap-2.5 transition-colors cursor-pointer"
+                >
+                  <UserRound className="w-4 h-4 text-purple-500" />
+                  <span>Solo Género Masculino</span>
+                </button>
+              </div>
+            )}
+          </div>
 
           <Button
             onClick={() => setIsModalOpen(true)}
@@ -528,20 +586,20 @@ export default function PatientsPage() {
         <Table
           columns={patientColumns}
           data={filteredPatients}
-          keyExtractor={(patient: any) => patient.id}
+          keyExtractor={(patient: Patient) => patient.id}
           itemsPerPage={5}
           emptyMessage="No se encontraron pacientes registrados."
         />
       )}
 
-      {/* ✍️ MODAL FIRMA DIGITAL DE CONSENTIMIENTO */}
+      {/* MODAL FIRMA DIGITAL DE CONSENTIMIENTO */}
       <Modal
         isOpen={isConsentModalOpen}
         onClose={() => {
           setIsConsentModalOpen(false);
           setTempSignature(null);
         }}
-        onSubmit={(e: any) => {
+        onSubmit={(e: React.FormEvent) => {
           e.preventDefault();
           if (tempSignature) {
             handleSaveSignature(tempSignature);
@@ -569,7 +627,7 @@ export default function PatientsPage() {
             </div>
 
             <SignaturePad
-              onSignatureChange={(signature: any) =>
+              onSignatureChange={(signature: string | null) =>
                 setTempSignature(signature)
               }
             />
@@ -577,7 +635,7 @@ export default function PatientsPage() {
         )}
       </Modal>
 
-      {/* 👁️ MODAL VER EXPEDIENTE */}
+      {/* MODAL VER EXPEDIENTE */}
       <Modal
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
@@ -642,7 +700,7 @@ export default function PatientsPage() {
         )}
       </Modal>
 
-      {/* 🟢/✏️ MODAL CREAR / EDITAR PACIENTE */}
+      {/* MODAL CREAR / EDITAR PACIENTE */}
       <Modal
         isOpen={isModalOpen}
         onClose={closeAndResetModal}
@@ -656,7 +714,9 @@ export default function PatientsPage() {
           label="Nombre Completo"
           placeholder="Ej: Sofía Martínez"
           value={name}
-          onChange={(e: any) => setName(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            setName(e.target.value)
+          }
           required
         />
 
@@ -664,7 +724,7 @@ export default function PatientsPage() {
           <Select
             label="Género"
             value={gender}
-            onChange={(e: any) =>
+            onChange={(e) =>
               setGender(e.target.value as "Femenino" | "Masculino")
             }
             options={[
@@ -678,7 +738,9 @@ export default function PatientsPage() {
             type="date"
             max={todayString}
             value={birthDate}
-            onChange={(e: any) => setBirthDate(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setBirthDate(e.target.value)
+            }
             required
           />
         </div>
@@ -690,14 +752,18 @@ export default function PatientsPage() {
             disabled={isMinor}
             placeholder="00000000-0"
             value={isMinor ? "" : dui}
-            onChange={(e: any) => setDui(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setDui(e.target.value)
+            }
             required={!isMinor && birthDate !== ""}
           />
           <Input
             label="Teléfono"
             placeholder="0000-0000"
             value={phone}
-            onChange={(e: any) => setPhone(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setPhone(e.target.value)
+            }
             required
           />
         </div>
@@ -708,14 +774,14 @@ export default function PatientsPage() {
             type="email"
             placeholder="correo@ejemplo.com"
             value={email}
-            onChange={(e: any) => setEmail(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setEmail(e.target.value)
+            }
           />
           <Select
             label="Estado"
             value={status}
-            onChange={(e: any) =>
-              setStatus(e.target.value as "Activo" | "Inactivo")
-            }
+            onChange={(e) => setStatus(e.target.value as "Activo" | "Inactivo")}
             options={[
               { label: "Activo", value: "Activo" },
               { label: "Inactivo", value: "Inactivo" },
@@ -749,14 +815,16 @@ export default function PatientsPage() {
               label="Nombre Completo del Responsable"
               placeholder="Ej: Mariana de Benítez"
               value={tutorName}
-              onChange={(e: any) => setTutorName(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setTutorName(e.target.value)
+              }
               required={isMinor}
             />
             <div className="grid grid-cols-2 gap-3">
               <Select
                 label="Parentesco"
                 value={tutorRelationship}
-                onChange={(e: any) => setTutorRelationship(e.target.value)}
+                onChange={(e) => setTutorRelationship(e.target.value)}
                 options={[
                   { label: "Seleccionar...", value: "" },
                   { label: "Madre", value: "Madre" },
@@ -771,47 +839,12 @@ export default function PatientsPage() {
                 label="DUI del Responsable"
                 placeholder="00000000-0"
                 value={tutorDui}
-                onChange={(e: any) => setTutorDui(e.target.value)}
+                onChange={(e) => setTutorDui(e.target.value)}
                 required={isMinor}
               />
             </div>
           </div>
         )}
-      </Modal>
-
-      {/* MODAL DESCARGAR REPORTES PDF */}
-      <Modal
-        isOpen={isDownloadModalOpen}
-        onClose={() => setIsDownloadModalOpen(false)}
-        onSubmit={handleDownloadReportPdf}
-        title="Generar Reporte en PDF"
-        submitText="Descargar Reporte PDF"
-        cancelText="Cancelar"
-        isLoading={isLoading}
-      >
-        <div className="space-y-4">
-          <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-800/50 rounded-2xl text-blue-800 dark:text-blue-200 text-xs">
-            <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
-            <p>
-              Selecciona un filtro para generar un documento PDF con la lista
-              consolidada de pacientes.
-            </p>
-          </div>
-          <Select
-            label="Filtrar por Género"
-            value={downloadGenderFilter}
-            onChange={(e: any) =>
-              setDownloadGenderFilter(
-                e.target.value as "Todos" | "Femenino" | "Masculino",
-              )
-            }
-            options={[
-              { label: "Todos los Pacientes", value: "Todos" },
-              { label: "Solo Pacientes Femeninos", value: "Femenino" },
-              { label: "Solo Pacientes Masculinos", value: "Masculino" },
-            ]}
-          />
-        </div>
       </Modal>
     </div>
   );
