@@ -2,7 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
+import {
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
 import { auth, googleProvider, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { doc, getDoc, setDoc } from "firebase/firestore";
@@ -33,7 +37,6 @@ export default function LoginPage() {
   const heroImageUrl = "/prueba.jpg";
   const logoUrl = "/logo.png";
 
-  // Evita el parpadeo de SSR durante la hidratación inicial
   useEffect(() => {
     setInitialMounting(false);
   }, []);
@@ -52,6 +55,14 @@ export default function LoginPage() {
 
       if (userSnap.exists()) {
         const userData = userSnap.data();
+
+        // 🛑 VALIDACIÓN DE USUARIO INACTIVO
+        if (userData.status === "inactive") {
+          await signOut(auth);
+          setError("Tu cuenta está inactiva. Consulta con el administrador.");
+          return;
+        }
+
         role = userData.role || "receptionist";
       } else {
         await setDoc(userRef, {
@@ -60,17 +71,20 @@ export default function LoginPage() {
           email: user.email,
           photoURL: user.photoURL,
           role: "receptionist",
+          status: "active", // Por defecto activo al registrar
           createdAt: new Date(),
         });
       }
 
       if (role === "psychologist") {
         router.push("/psychologist");
+      } else if (role === "admin") {
+        router.push("/admin/users");
       } else {
         router.push("/recepcionist");
       }
     } catch (err: any) {
-      setError("Error al iniciar sesión con Google.");
+      if (!error) setError("Error al iniciar sesión con Google.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -99,12 +113,24 @@ export default function LoginPage() {
       const userSnap = await getDoc(userRef);
 
       let role = "receptionist";
+
       if (userSnap.exists()) {
-        role = userSnap.data().role || "receptionist";
+        const userData = userSnap.data();
+
+        // 🛑 VALIDACIÓN DE USUARIO INACTIVO
+        if (userData.status === "inactive") {
+          await signOut(auth);
+          setError("Tu cuenta está inactiva. Consulta con el administrador.");
+          return;
+        }
+
+        role = userData.role || "receptionist";
       }
 
       if (role === "psychologist") {
         router.push("/psychologist");
+      } else if (role === "admin") {
+        router.push("/admin/users");
       } else {
         router.push("/recepcionist");
       }
@@ -126,7 +152,6 @@ export default function LoginPage() {
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col md:flex-row bg-white dark:bg-slate-900 transition-colors duration-300">
-      {/* 🔴 MITAD IZQUIERDA: IMAGEN (Ajustada para encajar sin scroll) */}
       <div className="hidden md:flex w-1/2 h-full relative overflow-hidden bg-slate-100 dark:bg-slate-800">
         {heroImageUrl && (
           <Image
@@ -141,13 +166,11 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
       </div>
 
-      {/* 🟢 MITAD DERECHA: FORMULARIO */}
       <div className="w-full md:w-1/2 h-full flex items-center justify-center p-6 sm:p-10 lg:p-12 bg-[#f5f5f7] dark:bg-slate-900 overflow-y-auto">
         {initialMounting ? (
           <LoginSkeleton />
         ) : (
           <div className="w-full max-w-sm flex flex-col items-center">
-            {/* Logo */}
             <div className="relative w-24 h-24 md:w-28 md:h-28 rounded-full bg-blue-50 dark:bg-slate-800 border-2 border-blue-100 dark:border-slate-700 flex items-center justify-center mb-4 md:mb-6 shadow-lg shadow-blue-500/10 overflow-hidden shrink-0">
               {logoUrl ? (
                 <Image

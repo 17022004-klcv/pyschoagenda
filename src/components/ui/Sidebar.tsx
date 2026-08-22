@@ -100,7 +100,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Botón de Colapsar */}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className={`p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50/80 dark:hover:bg-slate-800 rounded-xl transition-all duration-200 shrink-0 ${
+            className={`p-2 text-gray-400 hover:text-blue-600 dark:hover:bg-slate-800 rounded-xl transition-all duration-200 shrink-0 ${
               isCollapsed ? "w-full flex justify-center" : ""
             }`}
             title={isCollapsed ? "Expandir menú" : "Contraer menú"}
@@ -140,8 +140,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <div
                         className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200 ${
                           isActive
-                            ? "bg-white/40 dark:bg-slate-700 text-black dark:text-white"
-                            : "bg-transparent text-blue-600 dark:text-blue-400 group-hover:bg-blue-50/80 dark:group-hover:bg-slate-800"
+                            ? "text-black dark:text-white"
+                            : "text-blue-600 dark:text-blue-400"
                         }`}
                       >
                         {item.icon}
