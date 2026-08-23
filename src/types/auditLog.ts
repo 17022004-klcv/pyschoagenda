@@ -10,6 +10,13 @@ export type AuditCollection =
   | "therapy_categories"
   | "users";
 
+export interface UserContext {
+  uid: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 export interface AuditLogDocument {
   id?: string;
   action: AuditAction;

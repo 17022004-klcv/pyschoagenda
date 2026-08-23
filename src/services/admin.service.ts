@@ -1,6 +1,8 @@
 import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { UserAccount, UserDocument, ApproveUserPayload } from "@/types/user";
+import { UserContext } from "@/types/auditLog";
+import { updateDocWithLog } from "@/lib/firestoreLogger";
 
 export const adminService = {
   // Obtener TODOS los usuarios para que el filtro del frontend funcione correctamente
@@ -32,18 +34,33 @@ export const adminService = {
     return requests;
   },
 
-  async approveUser({ uid, role }: ApproveUserPayload): Promise<void> {
-    const userRef = doc(db, "users", uid);
-    await updateDoc(userRef, {
-      status: "active",
-      role: role,
-    });
+  // Aprobar usuario con registro en bitácora
+  async approveUser(
+    { uid, role }: ApproveUserPayload,
+    adminUser: UserContext,
+  ): Promise<void> {
+    await updateDocWithLog(
+      "users",
+      uid,
+      {
+        status: "active",
+        role: role,
+      },
+      adminUser,
+      `Usuario aprobado con el rol '${role}'`,
+    );
   },
 
-  async rejectUser(uid: string): Promise<void> {
-    const userRef = doc(db, "users", uid);
-    await updateDoc(userRef, {
-      status: "rejected",
-    });
+  // Rechazar usuario con registro en bitácora
+  async rejectUser(uid: string, adminUser: UserContext): Promise<void> {
+    await updateDocWithLog(
+      "users",
+      uid,
+      {
+        status: "rejected",
+      },
+      adminUser,
+      "Solicitud de usuario rechazada",
+    );
   },
 };

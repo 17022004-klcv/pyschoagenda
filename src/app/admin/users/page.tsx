@@ -27,25 +27,29 @@ import {
   toggleUserStatus,
 } from "@/services/user.service";
 import { UserAccount, UserRole, UserStatus, UserFormData } from "@/types/user";
+import { useAuth } from "@/lib/AuthContext";
+import { showAlert } from "@/lib/sweetalert";
 
-// Componentes UI de tu proyecto
 import { Table, Column } from "@/components/ui/Table";
 import { Select } from "@/components/ui/Select";
 import { ModalSheet } from "@/components/ui/Modal";
-
-// PDF Templates (Asegúrate de tener o ajustar estas importaciones)
 import { UsersListPDF, SingleUserPDF } from "@/components/pdf/UserPDF";
 
 export default function UsersPage() {
+  const { userData } = useAuth();
   const [users, setUsers] = useState<UserAccount[]>([]);
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
+  const handleOpenViewModal = (user: UserAccount) => {
+    setSelectedUser(user);
+    setIsViewModalOpen(true);
+  };
 
   // Filtros
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("Todos");
 
-  // Estado para desplegar el menú de exportación
+  // Exportación
   const [isPdfDropdownOpen, setIsPdfDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -54,8 +58,12 @@ export default function UsersPage() {
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserAccount | null>(null);
+  const handleOpenStatusModal = (user: UserAccount) => {
+    setSelectedUser(user);
+    setIsStatusModalOpen(true);
+  };
 
-  // Formulario tipado
+  // Formulario
   const [formData, setFormData] = useState<UserFormData>({
     name: "",
     email: "",
@@ -66,18 +74,12 @@ export default function UsersPage() {
     password: "",
   });
 
-  // Skeleton Local
-  const TableSkeleton = () => (
-    <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-3xl p-6 space-y-4 animate-pulse">
-      <div className="h-6 bg-gray-200 dark:bg-slate-700 rounded-lg w-1/4 mb-6"></div>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <div
-          key={i}
-          className="h-12 bg-gray-100 dark:bg-slate-700/50 rounded-2xl w-full"
-        ></div>
-      ))}
-    </div>
-  );
+  const currentUser = {
+    uid: userData?.uid || "",
+    name: userData?.name || "Administrador",
+    email: userData?.email || "",
+    role: userData?.role || "admin",
+  };
 
   const fetchUsers = async () => {
     try {
@@ -95,7 +97,6 @@ export default function UsersPage() {
     fetchUsers();
   }, []);
 
-  // Cierra el menú desplegable si se hace clic fuera de él
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -109,7 +110,6 @@ export default function UsersPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Filtro
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
       u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -121,7 +121,6 @@ export default function UsersPage() {
     return matchesSearch && matchesRole;
   });
 
-  // Handlers para Modales
   const handleOpenCreateModal = () => {
     setSelectedUser(null);
     setFormData({
@@ -150,16 +149,6 @@ export default function UsersPage() {
     setIsFormModalOpen(true);
   };
 
-  const handleOpenViewModal = (user: UserAccount) => {
-    setSelectedUser(user);
-    setIsViewModalOpen(true);
-  };
-
-  const handleOpenStatusModal = (user: UserAccount) => {
-    setSelectedUser(user);
-    setIsStatusModalOpen(true);
-  };
-
   // Guardar (Crear/Editar)
   const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,21 +156,23 @@ export default function UsersPage() {
 
     try {
       if (selectedUser) {
-        await updateUser(selectedUser.uid, formData);
+        await updateUser(selectedUser.uid, formData, currentUser);
+        showAlert.successToast("Usuario actualizado correctamente");
       } else {
-        await createUserWithAuth(formData);
+        await createUserWithAuth(formData, currentUser);
+        showAlert.successToast("Usuario registrado exitosamente");
       }
 
       await fetchUsers();
       setIsFormModalOpen(false);
     } catch (error: any) {
-      alert(error.message || "Error al registrar el usuario");
+      showAlert.errorToast(error.message || "Error al registrar el usuario");
     } finally {
       setIsSubmitLoading(false);
     }
   };
 
-  // Cambiar estado (Inactivar / Activar)
+  // Cambiar estado
   const handleToggleStatus = async () => {
     if (!selectedUser) return;
     setIsSubmitLoading(true);
@@ -189,17 +180,17 @@ export default function UsersPage() {
     try {
       const newStatus =
         selectedUser.status === "active" ? "inactive" : "active";
-      await toggleUserStatus(selectedUser.uid, newStatus);
+      await toggleUserStatus(selectedUser.uid, newStatus, currentUser);
+      showAlert.successToast(`Estado cambiado a ${newStatus}`);
       await fetchUsers();
       setIsStatusModalOpen(false);
     } catch (error) {
-      console.error("Error al cambiar estado:", error);
+      showAlert.errorToast("Error al cambiar el estado del usuario");
     } finally {
       setIsSubmitLoading(false);
     }
   };
 
-  // 📄 DESCARGAS EN PDF
   const handleDownloadFilteredPDF = async (
     filterType: "Todos" | "active" | "inactive",
   ) => {
@@ -237,6 +228,18 @@ export default function UsersPage() {
     link.click();
     URL.revokeObjectURL(url);
   };
+
+  const TableSkeleton = () => (
+    <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-3xl p-6 space-y-4 animate-pulse">
+      <div className="h-6 bg-gray-200 dark:bg-slate-700 rounded-lg w-1/4 mb-6"></div>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div
+          key={i}
+          className="h-12 bg-gray-100 dark:bg-slate-700/50 rounded-2xl w-full"
+        ></div>
+      ))}
+    </div>
+  );
 
   // Columnas para el componente <Table />
   const userColumns: Column<UserAccount>[] = [

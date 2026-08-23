@@ -26,6 +26,7 @@ import {
   TherapyCategory,
   TherapyCategoryFormData,
 } from "@/types/therapyCategory";
+import { useAuth } from "@/lib/AuthContext";
 
 // Componentes UI
 import { Table, Column } from "@/components/ui/Table";
@@ -39,6 +40,8 @@ import {
 } from "@/components/pdf/TherapyCategoryPDF";
 
 export default function TherapyCategoriesPage() {
+  const { userData } = useAuth();
+
   const [categories, setCategories] = useState<TherapyCategory[]>([]);
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
@@ -60,6 +63,14 @@ export default function TherapyCategoriesPage() {
     name: "",
     status: "active",
   });
+
+  // Usuario que realiza la acción para la auditoría
+  const currentUser = {
+    uid: userData?.uid || "",
+    name: userData?.name || "Usuario",
+    email: userData?.email || "",
+    role: userData?.role || "psicologo",
+  };
 
   const fetchCategories = async () => {
     try {
@@ -128,9 +139,11 @@ export default function TherapyCategoriesPage() {
     setIsSubmitLoading(true);
     try {
       if (selectedCategory) {
-        await updateCategory(selectedCategory.id, formData);
+        // 🟢 Se le pasa `currentUser` como 3er parámetro
+        await updateCategory(selectedCategory.id, formData, currentUser);
       } else {
-        await createCategory(formData);
+        // 🟢 Se le pasa `currentUser` como 2do parámetro
+        await createCategory(formData, currentUser);
       }
       await fetchCategories();
       setIsFormModalOpen(false);
@@ -147,7 +160,8 @@ export default function TherapyCategoriesPage() {
     try {
       const newStatus =
         selectedCategory.status === "active" ? "inactive" : "active";
-      await toggleCategoryStatus(selectedCategory.id, newStatus);
+      // 🟢 Se le pasa `currentUser` como 3er parámetro
+      await toggleCategoryStatus(selectedCategory.id, newStatus, currentUser);
       await fetchCategories();
       setIsStatusModalOpen(false);
     } catch (error) {
@@ -195,7 +209,6 @@ export default function TherapyCategoriesPage() {
     link.click();
     URL.revokeObjectURL(url);
   };
-
   const columns: Column<TherapyCategory>[] = [
     {
       header: "Categoría",

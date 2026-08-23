@@ -1,3 +1,5 @@
+import { UserContext } from "@/types/auditLog";
+
 export interface Appointment {
   id: string;
   patientId: string;
@@ -10,7 +12,7 @@ export interface Appointment {
 }
 
 export const AppointmentService = {
-  // 🟢 GET: Obtener citas por fecha específica (YYYY-MM-DD)
+  // 🟢 GET: Obtener citas por fecha específica
   getByDate: async (dateStr: string): Promise<Appointment[]> => {
     const response = await fetch(`/api/appointments?date=${dateStr}`, {
       method: "GET",
@@ -33,16 +35,18 @@ export const AppointmentService = {
     return await AppointmentService.getByDate(tomorrowStr);
   },
 
-  // 🟠 PATCH: Actualizar Estado
-  updateStatus: async (id: string, status: string) => {
+  // 🟠 PUT: Actualizar Estado registrando el usuario que realiza el cambio
+  updateStatus: async (id: string, status: string, user?: UserContext) => {
     try {
-      // 🟢 Cambiado a PUT para coincidir con la API de Next.js
       const response = await fetch(`/api/appointments/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({
+          status,
+          user, // 👈 Se envía la información del usuario para la bitácora en el backend/Firestore
+        }),
       });
 
       if (!response.ok) {

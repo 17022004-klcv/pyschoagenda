@@ -16,8 +16,11 @@ import {
 } from "lucide-react";
 import { UserAccount, UserRole } from "@/types/user";
 import { adminService } from "@/services/admin.service";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function ApplicationPage() {
+  const { userData } = useAuth();
+
   const [requests, setRequests] = useState<UserAccount[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,10 +34,16 @@ export default function ApplicationPage() {
   const [selectedRequest, setSelectedRequest] = useState<UserAccount | null>(
     null,
   );
-  const [assignedRole, setAssignedRole] = useState<
-    "psychologist" | "receptionist"
-  >("psychologist");
+  const [assignedRole, setAssignedRole] = useState<UserRole>("psychologist");
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Datos del usuario administrador activo para la bitácora
+  const currentUser = {
+    uid: userData?.uid || "",
+    name: userData?.name || "Administrador",
+    email: userData?.email || "",
+    role: userData?.role || "admin",
+  };
 
   const fetchRequests = async () => {
     try {
@@ -63,10 +72,13 @@ export default function ApplicationPage() {
     if (!selectedRequest) return;
     try {
       setActionLoading(true);
-      await adminService.approveUser({
-        uid: selectedRequest.uid,
-        role: assignedRole,
-      });
+      await adminService.approveUser(
+        {
+          uid: selectedRequest.uid,
+          role: assignedRole,
+        },
+        currentUser,
+      );
       setIsModalOpen(false);
       setSelectedRequest(null);
       await fetchRequests();
@@ -78,13 +90,12 @@ export default function ApplicationPage() {
   };
 
   const handleReject = async (uid: string) => {
-    if (!confirm("¿Estás seguro de que deseas rechazar este acceso?")) return;
     try {
       setActionLoading(true);
-      await adminService.rejectUser(uid);
+      await adminService.rejectUser(uid, currentUser);
       await fetchRequests();
-    } catch (err: any) {
-      alert(err.message || "No se pudo rechazar la solicitud.");
+    } catch (error: any) {
+      alert(error.message || "Error al rechazar la solicitud.");
     } finally {
       setActionLoading(false);
     }
@@ -95,7 +106,6 @@ export default function ApplicationPage() {
       req.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       req.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Si el filtro es "all", muestra todos. Si no, compara con el status del usuario
     const matchesStatus =
       filterStatus === "all" ? true : req.status === filterStatus;
 

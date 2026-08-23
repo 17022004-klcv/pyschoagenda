@@ -7,16 +7,17 @@ import {
   CalendarRange,
   Clock,
   CheckCircle2,
-  Plus,
   Loader2,
 } from "lucide-react";
 import {
   Appointment,
   AppointmentService,
 } from "@/services/inicioRecep.service";
-import { Patient, PatientService } from "@/services/patient.service";
+import { PatientService } from "@/services/patient.service";
+import { Patient } from "@/types/patient";
 import { StatCard } from "@/components/ui/StatCard";
-import { showAlert } from "@/lib/sweetalert"; // 👈 Asegúrate de que esta sea la ruta correcta a tu helper
+import { showAlert } from "@/lib/sweetalert";
+import { useAuth } from "@/lib/AuthContext";
 
 // 📅 Función para obtener fecha local YYYY-MM-DD
 const getLocalDateString = (dateObj: Date = new Date()): string => {
@@ -29,13 +30,11 @@ const getLocalDateString = (dateObj: Date = new Date()): string => {
 // 🗓️ Rango de la semana (Domingo a Sábado)
 const getWeekRangeStrings = () => {
   const now = new Date();
-  const dayOfWeek = now.getDay(); // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
+  const dayOfWeek = now.getDay();
 
-  // El domingo de la semana actual es retroceder 'dayOfWeek' días
   const sunday = new Date(now);
   sunday.setDate(now.getDate() - dayOfWeek);
 
-  // El sábado de la semana actual es avanzar 6 días desde el domingo
   const saturday = new Date(sunday);
   saturday.setDate(sunday.getDate() + 6);
 
@@ -46,12 +45,21 @@ const getWeekRangeStrings = () => {
 };
 
 export default function RecepcionistPage() {
+  const { userData } = useAuth();
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
   const [patientsMap, setPatientsMap] = useState<Map<string, Patient>>(
     new Map(),
   );
   const [loading, setLoading] = useState<boolean>(true);
   const [isUpdating, setIsUpdating] = useState<boolean>(false);
+
+  // Usuario para la bitácora/auditoría
+  const currentUser = {
+    uid: userData?.uid || "",
+    name: userData?.name || "Recepcionista",
+    email: userData?.email || "",
+    role: userData?.role || "recepcionista",
+  };
 
   // Fechas clave
   const todayStr = getLocalDateString(new Date());
@@ -74,7 +82,6 @@ export default function RecepcionistPage() {
           PatientService.getAll().catch(() => [] as Patient[]),
         ]);
 
-        // Mapa de pacientes por ID
         const pMap = new Map<string, Patient>();
         if (Array.isArray(patientsData)) {
           patientsData.forEach((p) => {
@@ -82,7 +89,6 @@ export default function RecepcionistPage() {
           });
         }
         setPatientsMap(pMap);
-
         setAllAppointments(appointmentsData || []);
       } catch (err) {
         console.error("Error al cargar datos del dashboard:", err);
@@ -94,14 +100,12 @@ export default function RecepcionistPage() {
     fetchData();
   }, [todayStr]);
 
-  // 🔍 Extraer fecha de la cita
-  const extractDate = (app: any): string => {
+  const extractDate = (app: Appointment | Record<string, unknown>): string => {
     if (!app.date) return todayStr;
     return typeof app.date === "string" ? app.date.split("T")[0] : "";
   };
 
-  // 👤 OBTENCIÓN DEL PACIENTE
-  const getPatientDisplayName = (item: any): string => {
+  const getPatientDisplayName = (item: Record<string, unknown>): string => {
     if (!item) return "Sin datos";
 
     if (Array.isArray(item.patientNames) && item.patientNames.length > 0) {
@@ -115,7 +119,7 @@ export default function RecepcionistPage() {
       if (names.length > 0) return names.join(", ");
     }
 
-    const singleId = item.patientId || item.patient_id;
+    const singleId = (item.patientId || item.patient_id) as string;
     if (singleId && patientsMap.has(String(singleId))) {
       return patientsMap.get(String(singleId))!.name;
     }
@@ -123,28 +127,29 @@ export default function RecepcionistPage() {
     if (item.patient) {
       if (typeof item.patient === "string" && item.patient.length < 24)
         return item.patient;
-      if (typeof item.patient === "object" && item.patient.name)
-        return item.patient.name;
+      if (
+        typeof item.patient === "object" &&
+        (item.patient as { name?: string }).name
+      )
+        return (item.patient as { name: string }).name;
     }
 
-    if (item.patientName) return item.patientName;
+    if (item.patientName) return String(item.patientName);
 
     return "Paciente sin nombre";
   };
 
-  // 🎯 OBTENCIÓN DEL TIPO DE SESIÓN
-  const getSessionType = (item: any): string => {
+  const getSessionType = (item: Record<string, unknown>): string => {
     if (!item) return "Consulta General";
     return (
-      item.therapyType ||
-      item.sessionType ||
-      item.type ||
-      item.reason ||
+      (item.therapyType as string) ||
+      (item.sessionType as string) ||
+      (item.type as string) ||
+      (item.reason as string) ||
       "Consulta General"
     );
   };
 
-  // Filtrados por fecha
   const todayAppointments = allAppointments.filter(
     (app) => extractDate(app) === todayStr,
   );
@@ -158,30 +163,25 @@ export default function RecepcionistPage() {
     return d >= weekStartStr && d <= weekEndStr;
   });
 
-  // 🛑 Citas PROGRAMADAS de hoy
-  const pendingAppointmentsToday = todayAppointments.filter(
-    (app: any) =>
-      app.status === "Programada" ||
-      app.status === "PROGRAMADA" ||
-      app.status === "programada",
-  );
+  const pendingAppointmentsToday = todayAppointments.filter((app) => {
+    const status = String(app.status || "").toLowerCase();
+    return status === "programada" || status === "pendiente";
+  });
 
-  // ⏰ Ordenar de AM a PM
   const sortedPendingAppointments = [...pendingAppointmentsToday].sort(
-    (a: any, b: any) => {
-      const timeA = a.time || a.hour || "00:00";
-      const timeB = b.time || b.hour || "00:00";
+    (a, b) => {
+      const timeA = a.time || "00:00";
+      const timeB = b.time || "00:00";
       return timeA.localeCompare(timeB);
     },
   );
 
-  // 🟢 Cambiar estado de la cita con actualización de tabla y alerta
+  // 🟢 Cambiar estado de la cita con auditoría de usuario
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
       setIsUpdating(true);
-      await AppointmentService.updateStatus(id, newStatus as any);
+      await AppointmentService.updateStatus(id, newStatus, currentUser);
 
-      // 1. Actualizar estado local asegurando el tipo explícito de status
       setAllAppointments((prev) =>
         prev.map((app) =>
           app.id === id
@@ -190,7 +190,6 @@ export default function RecepcionistPage() {
         ),
       );
 
-      // 2. Mostrar Alerta con tu helper
       if (typeof showAlert?.successToast === "function") {
         showAlert.successToast("Cita marcada como completada");
       }

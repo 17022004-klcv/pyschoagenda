@@ -1,44 +1,5 @@
-export interface Patient {
-  id: string;
-  name: string;
-  gender: "Femenino" | "Masculino";
-  birthDate: string;
-  age: number;
-  dui?: string;
-  phone: string;
-  email?: string;
-  status: "Activo" | "Inactivo";
-  isMinor: boolean;
-  observations?: string;
-  consentStatus?: "Pendiente" | "Firmado";
-  consentDate?: string;
-  consentSignature?: string;
-  tutor?: {
-    name: string;
-    relationship: string;
-    dui: string;
-    phone: string;
-  };
-}
-
-// DTO (Data Transfer Object) para la creación de pacientes
-export interface CreatePatientDTO {
-  name: string;
-  gender: "Femenino" | "Masculino";
-  birthDate: string;
-  age: number;
-  dui?: string;
-  phone: string;
-  email?: string;
-  status: "Activo" | "Inactivo";
-  isMinor: boolean;
-  tutor?: {
-    name: string;
-    relationship: string;
-    dui: string;
-    phone: string;
-  };
-}
+import { Patient, CreatePatientDTO } from "@/types/patient";
+import { UserContext } from "@/types/auditLog";
 
 export const PatientService = {
   // 🟢 GET: Obtener todos los pacientes (o buscar)
@@ -59,47 +20,59 @@ export const PatientService = {
     return await response.json();
   },
 
-  // 🟡 POST: Crear un nuevo paciente
-  create: async (data: CreatePatientDTO): Promise<Patient> => {
+  // 🟡 POST: Crear un nuevo paciente (con Auditoría)
+  create: async (
+    data: CreatePatientDTO,
+    user?: UserContext,
+  ): Promise<Patient> => {
     const response = await fetch("/api/patients", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, user }),
     });
     if (!response.ok) throw new Error("Error al guardar el paciente");
     return await response.json();
   },
 
-  // 🟠 PUT: Actualizar un paciente existente
+  // 🟠 PUT: Actualizar un paciente existente (con Auditoría)
   update: async (
     id: string,
     data: Partial<CreatePatientDTO>,
+    user?: UserContext,
   ): Promise<Patient> => {
     const response = await fetch(`/api/patients/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, user }),
     });
     if (!response.ok) throw new Error("Error al actualizar el paciente");
     return await response.json();
   },
 
-  // 🔴 DELETE: Eliminar un paciente
-  delete: async (id: string): Promise<void> => {
-    const response = await fetch(`/api/patients/${id}`, { method: "DELETE" });
+  // 🔴 DELETE: Eliminar un paciente físicamente (con Auditoría)
+  delete: async (id: string, user?: UserContext): Promise<void> => {
+    const response = await fetch(`/api/patients/${id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user }),
+    });
     if (!response.ok) throw new Error("Error al eliminar el paciente");
+  },
+
+  // 🔴 Inactivar Paciente (Borrado Lógico con Auditoría)
+  inactivate: async (id: string, user?: UserContext): Promise<Patient> => {
+    return await PatientService.update(id, { status: "Inactivo" }, user);
   },
 
   // 📥 DOWNLOAD: Descargar reporte CSV filtrado
   downloadReport: async (
-    genderFilter: "Todos" | "Femenino" | "Masculino",
+    genderFilter: "Todos" | "Femenino" | "Masculino" | "Otro",
   ): Promise<void> => {
     const response = await fetch(
       `/api/patients/download?gender=${genderFilter}`,
     );
     if (!response.ok) throw new Error("Error al generar el reporte");
 
-    // Convertir respuesta a Blob para iniciar la descarga nativa en el navegador
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -109,13 +82,6 @@ export const PatientService = {
     a.click();
     a.remove();
     window.URL.revokeObjectURL(url);
-  },
-
-  // Agrega estas funciones dentro de tu objeto PatientService en src/services/patient.service.ts
-
-  // 🔴 Inactivar Paciente (Borrado Lógico)
-  inactivate: async (id: string): Promise<Patient> => {
-    return await PatientService.update(id, { status: "Inactivo" });
   },
 
   // 📥 Descargar Ficha Individual

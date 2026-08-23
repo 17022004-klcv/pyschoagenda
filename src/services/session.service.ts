@@ -7,17 +7,33 @@ import {
   where,
   orderBy,
   serverTimestamp,
-  doc,
-  updateDoc,
 } from "firebase/firestore";
 
 import { SessionData } from "@/types/session";
+import { addDocWithLog, updateDocWithLog } from "@/lib/firestoreLogger"; // 👈 Importado
+import { UserContext } from "@/types/auditLog"; // 👈 Importado
 
 const SESSIONS_COLLECTION = "sessions";
 
 export const sessionService = {
-  // Guardar una nueva sesión
-  async createSession(sessionData: Omit<SessionData, "id" | "createdAt">) {
+  // Guardar una nueva sesión con bitácora
+  async createSession(
+    sessionData: Omit<SessionData, "id" | "createdAt">,
+    user?: UserContext,
+  ) {
+    if (user) {
+      const docRef = await addDocWithLog(
+        SESSIONS_COLLECTION,
+        {
+          ...sessionData,
+          createdAt: serverTimestamp(),
+        },
+        user,
+        `Nueva evolución/sesión clínica agregada para: ${sessionData.patientName || "Paciente"}`,
+      );
+      return { id: docRef.id, ...sessionData };
+    }
+
     const docRef = await addDoc(collection(db, SESSIONS_COLLECTION), {
       ...sessionData,
       createdAt: serverTimestamp(),
@@ -41,9 +57,7 @@ export const sessionService = {
 
   async getAllSessions(): Promise<SessionData[]> {
     try {
-      const sessionsRef = collection(db, "sessions");
-
-      // Ordenar por fecha o fecha de creación si es posible
+      const sessionsRef = collection(db, SESSIONS_COLLECTION);
       const q = query(sessionsRef, orderBy("date", "desc"));
       const querySnapshot = await getDocs(q);
 
@@ -62,16 +76,18 @@ export const sessionService = {
     }
   },
 
+  // Actualizar sesión registrando en la bitácora
   async updateSession(
-    sessionId: string,
+    id: string,
     data: Partial<SessionData>,
+    user: UserContext,
   ): Promise<void> {
-    try {
-      const sessionRef = doc(db, "sessions", sessionId);
-      await updateDoc(sessionRef, data);
-    } catch (error) {
-      console.error("Error al actualizar la sesión:", error);
-      throw error;
-    }
+    await updateDocWithLog(
+      SESSIONS_COLLECTION,
+      id,
+      data,
+      user,
+      `Sesión clínica/evolución (${id}) actualizada`,
+    );
   },
 };

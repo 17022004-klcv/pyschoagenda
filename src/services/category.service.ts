@@ -2,8 +2,6 @@ import {
   collection,
   doc,
   getDocs,
-  updateDoc,
-  addDoc,
   serverTimestamp,
   query,
   orderBy,
@@ -16,6 +14,8 @@ import {
   TherapyCategoryFormData,
   CategoryStatus,
 } from "@/types/therapyCategory";
+import { addDocWithLog, updateDocWithLog } from "@/lib/firestoreLogger";
+import { UserContext } from "@/types/auditLog";
 
 const CATEGORIES_COLLECTION = "therapy_categories";
 
@@ -46,30 +46,47 @@ export const getCategories = async (): Promise<TherapyCategory[]> => {
 
 export const createCategory = async (
   formData: TherapyCategoryFormData,
+  user: UserContext,
 ): Promise<void> => {
-  const categoriesRef = collection(db, CATEGORIES_COLLECTION);
-  await addDoc(categoriesRef, {
-    name: formData.name.trim(),
-    status: formData.status,
-    createdAt: serverTimestamp(),
-  });
+  await addDocWithLog(
+    CATEGORIES_COLLECTION,
+    {
+      name: formData.name.trim(),
+      status: formData.status,
+      createdAt: serverTimestamp(),
+    },
+    user,
+    `Nueva categoría de terapia creada: ${formData.name.trim()}`,
+  );
 };
 
 export const updateCategory = async (
   id: string,
   formData: TherapyCategoryFormData,
+  user: UserContext,
 ): Promise<void> => {
-  const categoryRef = doc(db, CATEGORIES_COLLECTION, id);
-  await updateDoc(categoryRef, {
-    name: formData.name.trim(),
-    status: formData.status,
-  });
+  await updateDocWithLog(
+    CATEGORIES_COLLECTION,
+    id,
+    {
+      name: formData.name.trim(),
+      status: formData.status,
+    },
+    user,
+    `Categoría '${formData.name.trim()}' actualizada`,
+  );
 };
 
 export const toggleCategoryStatus = async (
   id: string,
   newStatus: CategoryStatus,
+  user: UserContext,
 ): Promise<void> => {
-  const categoryRef = doc(db, CATEGORIES_COLLECTION, id);
-  await updateDoc(categoryRef, { status: newStatus });
+  await updateDocWithLog(
+    CATEGORIES_COLLECTION,
+    id,
+    { status: newStatus },
+    user,
+    `Estado de la categoría (${id}) cambiado a ${newStatus}`,
+  );
 };

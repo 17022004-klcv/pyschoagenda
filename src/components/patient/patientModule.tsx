@@ -20,9 +20,9 @@ import {
   FileSignature,
   CheckCircle2,
   Clock,
-  UserRound,
   ChevronDown,
   Users,
+  UserRound,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
@@ -33,17 +33,22 @@ import { ModalSheet as Modal } from "@/components/ui/Modal";
 import { Table, Column } from "@/components/ui/Table";
 import { SignaturePad } from "@/components/ui/SignaturePad";
 
-import { PatientService, Patient } from "@/services/patient.service";
+import { PatientService } from "@/services/patient.service";
+import { Patient } from "@/types/patient";
 import { showAlert } from "@/lib/sweetalert";
 import { PatientPdfDocument } from "@/components/pdf/PatientPdfDocument";
 import { PatientListPdfDocument } from "@/components/pdf/PatientListPdfDocument";
 import { ConsentPdfDocument } from "@/components/pdf/ConsentPdfDocument";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function PatientsPage() {
+  const { userData } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [genderFilter, setGenderFilter] = useState<string>("Todos");
   const [isPageLoading, setIsPageLoading] = useState(true);
+  const [tempSignature, setTempSignature] = useState<string | null>(null);
+  const todayString = new Date().toISOString().split("T")[0];
 
   // Modales
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -54,7 +59,6 @@ export default function PatientsPage() {
   // Estado de Selección / Edición
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [tempSignature, setTempSignature] = useState<string | null>(null);
 
   // Filtro de Descarga General (Dropdown Flotante)
   const [isPdfDropdownOpen, setIsPdfDropdownOpen] = useState(false);
@@ -62,7 +66,9 @@ export default function PatientsPage() {
 
   // Formulario Paciente
   const [name, setName] = useState("");
-  const [gender, setGender] = useState<"Femenino" | "Masculino">("Femenino");
+  const [gender, setGender] = useState<
+    "Femenino" | "Masculino" | "Otro" | "N/A"
+  >("Femenino");
   const [birthDate, setBirthDate] = useState("");
   const [dui, setDui] = useState("");
   const [phone, setPhone] = useState("");
@@ -76,7 +82,13 @@ export default function PatientsPage() {
   const [tutorDui, setTutorDui] = useState("");
   const [tutorPhone, setTutorPhone] = useState("");
 
-  const todayString = new Date().toISOString().split("T")[0];
+  // Contexto de Usuario para Auditoría
+  const currentUser = {
+    uid: userData?.uid || "",
+    name: userData?.name || "Usuario",
+    email: userData?.email || "",
+    role: userData?.role || "recepcionista",
+  };
 
   const fetchPatients = useCallback(async () => {
     try {
@@ -107,7 +119,6 @@ export default function PatientsPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Filtro combinado de pacientes para la tabla
   const filteredPatients = patients.filter((p) => {
     const matchesSearch =
       p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -119,7 +130,6 @@ export default function PatientsPage() {
     return matchesSearch && matchesGender;
   });
 
-  // Handlers para la descarga de PDF
   const handleDownloadFilteredPDF = async (
     filterType: "Todos" | "Femenino" | "Masculino",
   ) => {
@@ -192,7 +202,11 @@ export default function PatientsPage() {
     };
 
     try {
-      await PatientService.update(selectedPatient.id, updatedPatientData);
+      await PatientService.update(
+        selectedPatient.id,
+        updatedPatientData,
+        currentUser,
+      );
       showAlert.successToast("Consentimiento firmado y guardado con éxito");
       await fetchPatients();
       setIsConsentModalOpen(false);
@@ -206,7 +220,9 @@ export default function PatientsPage() {
   const handleDownloadConsentPdf = async (patient: Patient) => {
     try {
       showAlert.successToast("Generando Consentimiento PDF...");
-      const blob = await pdf(<ConsentPdfDocument patient={patient} />).toBlob();
+      const blob = await pdf(
+        <ConsentPdfDocument patient={patient as any} />,
+      ).toBlob();
       const url = URL.createObjectURL(blob);
 
       const a = document.createElement("a");
@@ -224,8 +240,8 @@ export default function PatientsPage() {
   const handleOpenEdit = (patient: Patient) => {
     setEditingId(patient.id);
     setName(patient.name);
-    setGender(patient.gender);
-    setBirthDate(patient.birthDate);
+    setGender(patient.gender || "Femenino");
+    setBirthDate(patient.birthDate || "");
     setDui(patient.dui || "");
     setPhone(patient.phone);
     setEmail(patient.email || "");
@@ -270,10 +286,10 @@ export default function PatientsPage() {
 
     try {
       if (editingId) {
-        await PatientService.update(editingId, patientData);
+        await PatientService.update(editingId, patientData, currentUser);
         showAlert.successToast("Paciente actualizado correctamente");
       } else {
-        const created = await PatientService.create(patientData);
+        const created = await PatientService.create(patientData, currentUser);
         showAlert.successToast("Paciente registrado exitosamente");
 
         const confirmSign = await showAlert.confirm(
@@ -310,7 +326,7 @@ export default function PatientsPage() {
 
     if (confirmed) {
       try {
-        await PatientService.inactivate(id);
+        await PatientService.inactivate(id, currentUser);
         await fetchPatients();
         showAlert.successToast("Paciente marcado como inactivo");
       } catch (error) {
@@ -322,7 +338,9 @@ export default function PatientsPage() {
   const handleDownloadSinglePdf = async (patient: Patient) => {
     try {
       showAlert.successToast("Generando Ficha PDF...");
-      const blob = await pdf(<PatientPdfDocument patient={patient} />).toBlob();
+      const blob = await pdf(
+        <PatientPdfDocument patient={patient as any} />,
+      ).toBlob();
       const url = URL.createObjectURL(blob);
 
       const a = document.createElement("a");

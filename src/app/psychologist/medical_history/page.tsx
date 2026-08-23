@@ -9,6 +9,7 @@ import {
   Edit,
   Calendar,
   FileCheck,
+  Loader2,
 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -16,12 +17,14 @@ import { Button } from "@/components/ui/Button";
 import { Table, Column } from "@/components/ui/Table";
 import { ModalSheet } from "@/components/ui/Modal";
 import { sessionService } from "@/services/session.service";
-import { PatientService, Patient } from "@/services/patient.service";
+import { PatientService } from "@/services/patient.service";
+import { Patient } from "@/types/patient";
 import { SessionData } from "@/types/session";
 import { PDFDownloadLink, pdf } from "@react-pdf/renderer";
 import { SessionDetailPdfDocument } from "@/components/pdf/SessionDetailPdfDocument";
 import { AppointmentProofPdfDocument } from "@/components/pdf/AppointmentProofPdfDocument";
 import { FullExpedientPdfDocument } from "@/components/pdf/FullExpedientPdfDocument";
+import { useAuth } from "@/lib/AuthContext";
 
 const THERAPY_OPTIONS = [
   { value: "TODAS", label: "Todas las terapias" },
@@ -34,10 +37,11 @@ const THERAPY_OPTIONS = [
 ];
 
 export default function MedicalHistoryPage() {
+  const { userData } = useAuth();
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
 
-  // 🟢 Filtros de la tabla principal
+  // Filtros de la tabla principal
   const [selectedExpedient, setSelectedExpedient] = useState<string>("");
   const [selectedTherapy, setSelectedTherapy] = useState("TODAS");
   const [startDate, setStartDate] = useState<string>("");
@@ -52,7 +56,7 @@ export default function MedicalHistoryPage() {
     useState<string>("");
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
-  // 🟢 Título / nombre de archivo del expediente a descargar (derivados)
+  // Título / nombre derivado
   const downloadTitle =
     downloadScope === "SPECIFIC"
       ? `EXPEDIENTE: ${selectedPatientExpedient}`
@@ -63,7 +67,7 @@ export default function MedicalHistoryPage() {
       ? `Expediente_${selectedPatientExpedient.replace(/\s+/g, "_")}.pdf`
       : "Historial_Clinico_Completo.pdf";
 
-  // Estados para Modales de Detalle/Edición
+  // Modales de Detalle/Edición
   const [selectedSession, setSelectedSession] = useState<SessionData | null>(
     null,
   );
@@ -78,7 +82,14 @@ export default function MedicalHistoryPage() {
     analysis: "",
   });
 
-  // Carga inicial de datos
+  // Usuario para logs
+  const currentUser = {
+    uid: userData?.uid || "",
+    name: userData?.name || "Usuario",
+    email: userData?.email || "",
+    role: userData?.role || "psicologo",
+  };
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -97,24 +108,18 @@ export default function MedicalHistoryPage() {
     loadData();
   }, []);
 
-  // 🟢 Función para obtener nombres cruzando IDs
   const getPatientDisplayNames = (session: SessionData): string => {
     if (session.patientName) return session.patientName;
-
     const pIds = session.patientId ? [session.patientId] : [];
-
     if (pIds.length > 0) {
       const foundNames = patients
         .filter((p) => pIds.includes(p.id))
         .map((p) => p.name);
-
       if (foundNames.length > 0) return foundNames.join(", ");
     }
-
     return "Paciente no encontrado";
   };
 
-  // 🟢 Opciones del buscador (Select) por paciente / código de expediente
   const patientExpedientOptions = useMemo(() => {
     const map = new Map<string, string>();
     sessions.forEach((s) => {
@@ -137,12 +142,8 @@ export default function MedicalHistoryPage() {
     ];
   }, [sessions, patients]);
 
-  // 🟢 Normaliza cualquier formato de fecha (string ISO, "DD/MM/YYYY", Date,
-  // o Timestamp tipo Firestore con { seconds }) a "YYYY-MM-DD" para comparar
   const toDateOnlyString = (value: unknown): string => {
     if (!value) return "";
-
-    // Firestore Timestamp-like: { seconds: number, nanoseconds: number }
     if (
       typeof value === "object" &&
       value !== null &&
@@ -152,38 +153,27 @@ export default function MedicalHistoryPage() {
       const d = new Date(seconds * 1000);
       return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
     }
-
     if (value instanceof Date) {
       return isNaN(value.getTime()) ? "" : value.toISOString().slice(0, 10);
     }
-
     if (typeof value === "string") {
-      // Ya viene como YYYY-MM-DD (o con hora pegada al final)
       const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
       if (isoMatch) return isoMatch[0];
-
-      // Formato D/M/YYYY o DD/MM/YYYY (con o sin ceros a la izquierda)
       const dmyMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
       if (dmyMatch) {
         const [, dd, mm, yyyy] = dmyMatch;
         return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
       }
-
-      // Último recurso: dejar que Date lo intente parsear
       const parsed = new Date(value);
       if (!isNaN(parsed.getTime())) {
         return parsed.toISOString().slice(0, 10);
       }
-      return "";
     }
-
     return "";
   };
 
-  // 1️⃣ Filtrado de sesiones principal (paciente/expediente + terapia + rango de fechas)
   const filteredSessions = useMemo(() => {
     return sessions.filter((session) => {
-      // Filtro Paciente / Expediente (Select)
       if (selectedExpedient) {
         const patientNameStr = getPatientDisplayNames(session);
         const matchesSelection =
@@ -191,23 +181,16 @@ export default function MedicalHistoryPage() {
           patientNameStr === selectedExpedient;
         if (!matchesSelection) return false;
       }
-
-      // Filtro Tipo de Terapia
       if (
         selectedTherapy !== "TODAS" &&
         session.therapyType !== selectedTherapy
       ) {
         return false;
       }
-
-      // Filtro Rango de Fechas
       const sessionDateOnly = toDateOnlyString(session.date);
-      if (startDate && sessionDateOnly && sessionDateOnly < startDate) {
+      if (startDate && sessionDateOnly && sessionDateOnly < startDate)
         return false;
-      }
-      if (endDate && sessionDateOnly && sessionDateOnly > endDate) {
-        return false;
-      }
+      if (endDate && sessionDateOnly && sessionDateOnly > endDate) return false;
 
       return true;
     });
@@ -220,7 +203,6 @@ export default function MedicalHistoryPage() {
     endDate,
   ]);
 
-  // 3️⃣ Lógica de sesiones a descargar (modal de opciones de descarga)
   const sessionsToDownload = useMemo(() => {
     if (downloadScope === "ALL") {
       return filteredSessions.map((s) => ({
@@ -228,7 +210,6 @@ export default function MedicalHistoryPage() {
         patientName: getPatientDisplayNames(s),
       }));
     }
-
     return sessions
       .filter(
         (s) =>
@@ -247,11 +228,8 @@ export default function MedicalHistoryPage() {
     patients,
   ]);
 
-  // Handler que genera el PDF EN EL MOMENTO del click (evita descargar una
-  // versión desactualizada por condiciones de carrera con datos async)
   const handleDownloadExpedient = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (downloadScope === "SPECIFIC" && !selectedPatientExpedient) {
       alert("Selecciona un expediente / paciente para descargar.");
       return;
@@ -263,7 +241,6 @@ export default function MedicalHistoryPage() {
 
     try {
       setIsGeneratingPdf(true);
-
       const blob = await pdf(
         <FullExpedientPdfDocument
           sessions={sessionsToDownload}
@@ -279,7 +256,6 @@ export default function MedicalHistoryPage() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-
       setIsDownloadModalOpen(false);
     } catch (error) {
       console.error("Error al generar el PDF del expediente:", error);
@@ -289,7 +265,6 @@ export default function MedicalHistoryPage() {
     }
   };
 
-  // Acciones de Modal
   const handleOpenView = (session: SessionData) => {
     setSelectedSession(session);
     setIsViewOpen(true);
@@ -312,7 +287,11 @@ export default function MedicalHistoryPage() {
 
     try {
       setIsSaving(true);
-      await sessionService.updateSession(selectedSession.id, editFormData);
+      await sessionService.updateSession(
+        selectedSession.id,
+        editFormData,
+        currentUser,
+      );
 
       setSessions((prev) =>
         prev.map((s) =>
@@ -329,7 +308,6 @@ export default function MedicalHistoryPage() {
     }
   };
 
-  // Definición de Columnas
   const columns: Column<SessionData>[] = [
     {
       header: "Cod. Exp",
@@ -351,7 +329,7 @@ export default function MedicalHistoryPage() {
     {
       header: "Paciente(s)",
       accessor: (item) => (
-        <span className="font-medium text-gray-900">
+        <span className="font-medium text-gray-900 dark:text-white">
           {getPatientDisplayNames(item)}
         </span>
       ),

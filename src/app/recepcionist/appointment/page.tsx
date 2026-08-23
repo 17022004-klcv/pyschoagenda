@@ -25,14 +25,15 @@ import { ModalSheet as Modal } from "@/components/ui/Modal";
 import { Table, Column } from "@/components/ui/Table";
 import { AppointmentCalendar } from "@/components/ui/Calendar";
 import { showAlert } from "@/lib/sweetalert";
-
+import { useAuth } from "@/lib/AuthContext";
+import { AppointmentService } from "@/services/appointment.service";
+import { PatientService } from "@/services/patient.service";
+import { Patient } from "@/types/patient";
 import {
-  AppointmentService,
   Appointment,
   TherapyType,
   AppointmentStatus,
-} from "@/services/appointment.service";
-import { PatientService, Patient } from "@/services/patient.service";
+} from "@/types/appointment";
 
 const THERAPY_OPTIONS: TherapyType[] = [
   "Terapia Individual",
@@ -56,6 +57,7 @@ const STATUS_OPTIONS: AppointmentStatus[] = [
 ];
 
 export default function AppointmentsPage() {
+  const { userData } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patientsList, setPatientsList] = useState<Patient[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -82,6 +84,14 @@ export default function AppointmentsPage() {
     status: "Programada" as AppointmentStatus,
     notes: "",
   });
+
+  // Objeto con la información del usuario actual para la bitácora
+  const currentUser = {
+    uid: userData?.uid || "",
+    name: userData?.name || "Usuario",
+    email: userData?.email || "",
+    role: userData?.role || "psicologo",
+  };
 
   const fetchData = useCallback(async () => {
     setIsPageLoading(true);
@@ -189,10 +199,16 @@ export default function AppointmentsPage() {
 
     try {
       if (selectedAppointment) {
-        await AppointmentService.update(selectedAppointment.id, dataToSave);
+        // 🟢 Se pasa `currentUser` como 3er parámetro
+        await AppointmentService.update(
+          selectedAppointment.id,
+          dataToSave,
+          currentUser,
+        );
         showAlert.successToast("Cita actualizada correctamente.");
       } else {
-        await AppointmentService.create(dataToSave);
+        // 🟢 Se pasa `currentUser` como 2do parámetro
+        await AppointmentService.create(dataToSave, currentUser);
         showAlert.successToast("Cita agendada correctamente.");
       }
       await fetchData();
@@ -211,7 +227,8 @@ export default function AppointmentsPage() {
     );
     if (confirmed) {
       try {
-        await AppointmentService.cancel(id);
+        // 🟢 Se pasa `currentUser` como 2do parámetro
+        await AppointmentService.cancel(id, currentUser);
         showAlert.successToast("La cita fue cancelada.");
         fetchData();
       } catch (error) {

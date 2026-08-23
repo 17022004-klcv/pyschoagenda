@@ -44,7 +44,7 @@ export interface UserFormData {
 // DTOs específicos para las acciones del Admin al aprobar/rechazar solicitudes
 export interface ApproveUserPayload {
   uid: string;
-  role: Extract<UserRole, "psychologist" | "receptionist">;
+  role: UserRole;
 }
 
 export interface RejectUserPayload {
