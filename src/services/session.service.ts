@@ -1,7 +1,6 @@
 import { db } from "@/lib/firebase";
 import {
   collection,
-  addDoc,
   getDocs,
   query,
   where,
@@ -10,34 +9,35 @@ import {
 } from "firebase/firestore";
 
 import { SessionData } from "@/types/session";
-import { addDocWithLog, updateDocWithLog } from "@/lib/firestoreLogger"; // 👈 Importado
-import { UserContext } from "@/types/auditLog"; // 👈 Importado
+import { addDocWithLog, updateDocWithLog } from "@/lib/firestoreLogger";
+import { UserContext } from "@/types/auditLog";
 
 const SESSIONS_COLLECTION = "sessions";
 
 export const sessionService = {
-  // Guardar una nueva sesión con bitácora
+  // Guardar una nueva sesión (exige usuario obligatorio)
   async createSession(
     sessionData: Omit<SessionData, "id" | "createdAt">,
-    user?: UserContext,
+    user: UserContext,
   ) {
-    if (user) {
-      const docRef = await addDocWithLog(
-        SESSIONS_COLLECTION,
-        {
-          ...sessionData,
-          createdAt: serverTimestamp(),
-        },
-        user,
-        `Nueva evolución/sesión clínica agregada para: ${sessionData.patientName || "Paciente"}`,
+    if (!user || !user.uid) {
+      throw new Error(
+        "Se requiere un usuario autenticado válido para registrar el evento en la bitácora.",
       );
-      return { id: docRef.id, ...sessionData };
     }
 
-    const docRef = await addDoc(collection(db, SESSIONS_COLLECTION), {
-      ...sessionData,
-      createdAt: serverTimestamp(),
-    });
+    const patientDisplayName = sessionData.patientName || "Paciente";
+
+    const docRef = await addDocWithLog(
+      SESSIONS_COLLECTION,
+      {
+        ...sessionData,
+        createdAt: serverTimestamp(),
+      },
+      user,
+      `Nueva evolución/sesión clínica agregada para: ${patientDisplayName}`,
+    );
+
     return { id: docRef.id, ...sessionData };
   },
 
@@ -55,6 +55,7 @@ export const sessionService = {
     })) as SessionData[];
   },
 
+  // Obtener todas las sesiones
   async getAllSessions(): Promise<SessionData[]> {
     try {
       const sessionsRef = collection(db, SESSIONS_COLLECTION);
@@ -76,12 +77,18 @@ export const sessionService = {
     }
   },
 
-  // Actualizar sesión registrando en la bitácora
+  // Actualizar sesión (exige usuario obligatorio)
   async updateSession(
     id: string,
     data: Partial<SessionData>,
     user: UserContext,
   ): Promise<void> {
+    if (!user || !user.uid) {
+      throw new Error(
+        "Se requiere un usuario autenticado válido para actualizar y registrar la auditoría.",
+      );
+    }
+
     await updateDocWithLog(
       SESSIONS_COLLECTION,
       id,

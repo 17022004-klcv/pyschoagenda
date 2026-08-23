@@ -45,7 +45,7 @@ export const ExpedientService = {
   },
 
   /**
-   * Obtiene o crea un expediente para una lista de pacientes registrando en bitácora
+   * Obtiene o crea un expediente para una lista de pacientes registrando en bitácora (Exige Auditoría)
    */
   async getOrCreateExpedient(
     params: {
@@ -55,6 +55,12 @@ export const ExpedientService = {
     },
     user: UserContext,
   ) {
+    if (!user || !user.uid) {
+      throw new Error(
+        "Se requiere un usuario autenticado válido para aperturar el expediente y registrar la auditoría.",
+      );
+    }
+
     const { patientIds, patientNames, therapyType } = params;
 
     const expedientsRef = collection(db, "expedients");
@@ -68,6 +74,7 @@ export const ExpedientService = {
 
     const existingSnap = await getDocs(q);
 
+    // Si ya existe el expediente, no se vuelve a registrar inserción
     if (!existingSnap.empty) {
       const existingDoc = existingSnap.docs[0];
       return { id: existingDoc.id, code: existingDoc.data().code };
@@ -83,7 +90,7 @@ export const ExpedientService = {
       status: "Activo",
     };
 
-    // 🟢 Creación con registro en auditoría
+    // 🟢 Creación con registro obligatorio en auditoría
     const docRef = await addDocWithLog(
       "expedients",
       newExpedient,

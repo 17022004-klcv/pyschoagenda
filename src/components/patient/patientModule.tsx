@@ -192,6 +192,12 @@ export default function PatientsPage() {
 
   const handleSaveSignature = async (signatureDataUrl: string) => {
     if (!selectedPatient) return;
+
+    if (!currentUser.uid) {
+      showAlert.errorToast("No hay usuario autenticado activo.");
+      return;
+    }
+
     setIsLoading(true);
 
     const updatedPatientData = {
@@ -260,6 +266,15 @@ export default function PatientsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 🔴 Verificación obligatoria del ID de usuario
+    if (!currentUser.uid) {
+      showAlert.errorToast(
+        "Esperando sesión del usuario... Intenta de nuevo en un segundo.",
+      );
+      return;
+    }
+
     setIsLoading(true);
 
     const patientData = {
@@ -305,8 +320,9 @@ export default function PatientsPage() {
 
       await fetchPatients();
       closeAndResetModal();
-    } catch (error) {
-      showAlert.errorToast("Error al guardar la información");
+    } catch (error: any) {
+      console.error("Error al guardar paciente:", error);
+      showAlert.errorToast(error.message || "Error al guardar la información");
     } finally {
       setIsLoading(false);
     }

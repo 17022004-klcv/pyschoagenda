@@ -20,47 +20,74 @@ export const PatientService = {
     return await response.json();
   },
 
-  // 🟡 POST: Crear un nuevo paciente (con Auditoría)
+  // 🟡 POST: Crear un nuevo paciente (Exige Auditoría)
   create: async (
     data: CreatePatientDTO,
-    user?: UserContext,
+    user: UserContext,
   ): Promise<Patient> => {
+    if (!user || !user.uid) {
+      throw new Error(
+        "Se requiere un usuario autenticado válido para registrar el nuevo paciente en la bitácora.",
+      );
+    }
+
     const response = await fetch("/api/patients", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...data, user }),
     });
+
     if (!response.ok) throw new Error("Error al guardar el paciente");
     return await response.json();
   },
 
-  // 🟠 PUT: Actualizar un paciente existente (con Auditoría)
+  // 🟠 PUT: Actualizar un paciente existente (Exige Auditoría)
   update: async (
     id: string,
     data: Partial<CreatePatientDTO>,
-    user?: UserContext,
+    user: UserContext,
   ): Promise<Patient> => {
+    if (!user || !user.uid) {
+      throw new Error(
+        "Se requiere un usuario autenticado válido para actualizar el paciente y registrar la auditoría.",
+      );
+    }
+
     const response = await fetch(`/api/patients/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...data, user }),
     });
+
     if (!response.ok) throw new Error("Error al actualizar el paciente");
     return await response.json();
   },
 
-  // 🔴 DELETE: Eliminar un paciente físicamente (con Auditoría)
-  delete: async (id: string, user?: UserContext): Promise<void> => {
+  // 🔴 DELETE: Eliminar un paciente físicamente (Exige Auditoría)
+  delete: async (id: string, user: UserContext): Promise<void> => {
+    if (!user || !user.uid) {
+      throw new Error(
+        "Se requiere un usuario autenticado válido para eliminar el paciente y registrar la auditoría.",
+      );
+    }
+
     const response = await fetch(`/api/patients/${id}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ user }),
     });
+
     if (!response.ok) throw new Error("Error al eliminar el paciente");
   },
 
-  // 🔴 Inactivar Paciente (Borrado Lógico con Auditoría)
-  inactivate: async (id: string, user?: UserContext): Promise<Patient> => {
+  // 🔴 Inactivar Paciente (Borrado Lógico con Auditoría Explicita)
+  inactivate: async (id: string, user: UserContext): Promise<Patient> => {
+    if (!user || !user.uid) {
+      throw new Error(
+        "Se requiere un usuario autenticado válido para inactivar el paciente.",
+      );
+    }
+
     return await PatientService.update(id, { status: "Inactivo" }, user);
   },
 

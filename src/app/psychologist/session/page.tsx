@@ -10,7 +10,8 @@ import { sessionService } from "@/services/session.service";
 import { PatientService } from "@/services/patient.service";
 import { TherapyType } from "@/services/appointment.service";
 import { ExpedientService } from "@/services/expedient.service";
-import { Patient } from "@/services/patient.service"; // O la interfaz/tipo de tu paciente
+import { Patient } from "@/types/patient"; // O la interfaz/tipo de tu paciente
+import { useAuth } from "@/hooks/useAuth";
 
 const THERAPY_OPTIONS: TherapyType[] = [
   "Terapia Individual",
@@ -54,45 +55,47 @@ export default function SessionPage() {
     analysis: "",
   });
 
+  const { user } = useAuth();
+
   useEffect(() => {
-  async function loadData() {
-    try {
-      const patientsData = await PatientService.getAll();
-      
-      // 1. Guardar pacientes en estado sin formatear
-      setRawPatients(patientsData);
+    async function loadData() {
+      try {
+        const patientsData = await PatientService.getAll();
 
-      // 2. Formatear lista para el Select de Pacientes
-      const formattedPatients = patientsData.map((p) => ({
-        value: p.id,
-        label: p.name,
-      }));
+        // 1. Guardar pacientes en estado sin formatear
+        setRawPatients(patientsData);
 
-      // 3. Extraer y formatear lista de Tutores
-      const tutorsList = patientsData
-        .filter((p) => p.tutor && p.tutor.name)
-        .map((p) => ({
-          value: p.tutor!.name,
-          label: `${p.tutor!.name} (${p.tutor!.relationship} de ${p.name})`,
+        // 2. Formatear lista para el Select de Pacientes
+        const formattedPatients = patientsData.map((p) => ({
+          value: p.id,
+          label: p.name,
         }));
 
-      // 4. Actualizar las opciones de los Selects
-      setPatientOptions([
-        { value: "", label: "Seleccionar paciente..." },
-        ...formattedPatients,
-      ]);
+        // 3. Extraer y formatear lista de Tutores
+        const tutorsList = patientsData
+          .filter((p) => p.tutor && p.tutor.name)
+          .map((p) => ({
+            value: p.tutor!.name,
+            label: `${p.tutor!.name} (${p.tutor!.relationship} de ${p.name})`,
+          }));
 
-      setTutorOptions([
-        { value: "", label: "Seleccionar tutor..." },
-        ...tutorsList,
-      ]);
-    } catch (error) {
-      console.error("Error al cargar datos:", error);
+        // 4. Actualizar las opciones de los Selects
+        setPatientOptions([
+          { value: "", label: "Seleccionar paciente..." },
+          ...formattedPatients,
+        ]);
+
+        setTutorOptions([
+          { value: "", label: "Seleccionar tutor..." },
+          ...tutorsList,
+        ]);
+      } catch (error) {
+        console.error("Error al cargar datos:", error);
+      }
     }
-  }
 
-  loadData();
-}, []);
+    loadData();
+  }, []);
   // Handlers para agregar, actualizar y remover selectores de paciente
   const handlePatientChange = (index: number, value: string) => {
     const updated = [...formData.selectedPatients];
@@ -113,93 +116,103 @@ export default function SessionPage() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  // Validación: verificar que al menos el primer paciente esté seleccionado
-  const validPatients = formData.selectedPatients.filter((p) => p !== "");
-  if (validPatients.length === 0 || !formData.theme) {
-    showAlert?.errorToast
-      ? showAlert.errorToast("Por favor completa los campos obligatorios")
-      : alert("Por favor completa los campos obligatorios");
-    return;
-  }
+    if (!user) {
+      showAlert.errorToast("Debes estar autenticado para guardar una sesión.");
+      return;
+    }
+    // Validación: verificar que al menos el primer paciente esté seleccionado
+    const validPatients = formData.selectedPatients.filter((p) => p !== "");
+    if (validPatients.length === 0 || !formData.theme) {
+      showAlert?.errorToast
+        ? showAlert.errorToast("Por favor completa los campos obligatorios")
+        : alert("Por favor completa los campos obligatorios");
+      return;
+    }
 
-  try {
-    // 🟢 1. Obtener la información completa de los pacientes seleccionados
-    const selectedPatientsData = rawPatients.filter((p) =>
-      validPatients.includes(p.id)
-    );
+    try {
+      // 🟢 1. Obtener la información completa de los pacientes seleccionados
+      const selectedPatientsData = rawPatients.filter((p) =>
+        validPatients.includes(p.id),
+      );
 
-    const patientIds = selectedPatientsData.map((p) => p.id);
-    const patientNames = selectedPatientsData.map((p) => p.name);
+      const patientIds = selectedPatientsData.map((p) => p.id);
+      const patientNames = selectedPatientsData.map((p) => p.name);
 
-    // 🟢 2. Generar u obtener el expediente (sea Individual, Pareja, Familiar, etc.)
-    const expedient = await ExpedientService.getOrCreateExpedient({
-      patientIds,
-      patientNames,
-      therapyType: formData.therapyType,
-    });
+      // 🟢 2. Generar u obtener el expediente pasando el usuario autenticado para la auditoría
+      const expedient = await ExpedientService.getOrCreateExpedient(
+        {
+          patientIds,
+          patientNames,
+          therapyType: formData.therapyType,
+        },
+        user, // 👈 Se agrega el argumento 'user' obligatorio
+      );
 
-    // 🟢 3. Crear la sesión pasando el código real obtenido (ej: "JCMP001")
-    await sessionService.createSession({
-      patientId: validPatients[0], // O enviar el arreglo 'patientIds' si tu backend lo acepta
-      expedientCode: expedient.code, // 👈 Aquí se asigna el código dinámico
-      therapyType: formData.therapyType,
-      hasTutor: formData.hasTutor,
-      tutorName: formData.hasTutor ? formData.tutorName : "",
-      theme: formData.theme,
-      summary: formData.summary,
-      analysis: formData.analysis,
-      date: currentDate,
-    });
+      // 🟢 3. Crear la sesión pasando el código real obtenido y el usuario autenticado
+      await sessionService.createSession(
+        {
+          patientId: validPatients[0], // O enviar el arreglo 'patientIds' si tu backend lo acepta
+          expedientCode: expedient.code, // 👈 Aquí se asigna el código dinámico
+          therapyType: formData.therapyType,
+          hasTutor: formData.hasTutor,
+          tutorName: formData.hasTutor ? formData.tutorName : "",
+          theme: formData.theme,
+          summary: formData.summary,
+          analysis: formData.analysis,
+          date: currentDate,
+        },
+        user, // 👈 Se agrega el argumento 'user' obligatorio
+      );
 
-    showAlert?.successToast
-      ? showAlert.successToast("Sesión guardada en el expediente con éxito")
-      : alert("Sesión guardada con éxito");
+      showAlert?.successToast
+        ? showAlert.successToast("Sesión guardada en el expediente con éxito")
+        : alert("Sesión guardada con éxito");
 
-    // Limpieza de formulario
-    setFormData({
-      selectedPatients: [""],
-      therapyType: "Terapia Individual" as TherapyType,
-      hasTutor: false,
-      tutorName: "",
-      theme: "",
-      summary: "",
-      analysis: "",
-    });
-  } catch (error) {
-    console.error("Error al guardar la sesión:", error);
-    showAlert?.errorToast
-      ? showAlert.errorToast("Error al guardar la sesión")
-      : alert("Error al guardar la sesión");
-  }
-};
+      // Limpieza de formulario
+      setFormData({
+        selectedPatients: [""],
+        therapyType: "Terapia Individual" as TherapyType,
+        hasTutor: false,
+        tutorName: "",
+        theme: "",
+        summary: "",
+        analysis: "",
+      });
+    } catch (error) {
+      console.error("Error al guardar la sesión:", error);
+      showAlert?.errorToast
+        ? showAlert.errorToast("Error al guardar la sesión")
+        : alert("Error al guardar la sesión");
+    }
+  };
 
-const SessionFormSkeleton = () => (
-  <div className="space-y-6 animate-pulse">
-    {/* Header Skeleton */}
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200 dark:border-slate-700/80">
-      <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded-lg w-1/3"></div>
-      <div className="h-8 bg-gray-100 dark:bg-slate-800 rounded-xl w-32"></div>
-    </div>
+  const SessionFormSkeleton = () => (
+    <div className="space-y-6 animate-pulse">
+      {/* Header Skeleton */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200 dark:border-slate-700/80">
+        <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded-lg w-1/3"></div>
+        <div className="h-8 bg-gray-100 dark:bg-slate-800 rounded-xl w-32"></div>
+      </div>
 
-    {/* Form Skeleton */}
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
+      {/* Form Skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
+        <div className="h-10 bg-gray-100 dark:bg-slate-800 rounded-lg"></div>
+        <div className="h-10 bg-gray-100 dark:bg-slate-800 rounded-lg"></div>
+      </div>
+
+      <div className="h-20 bg-gray-100 dark:bg-slate-800 rounded-xl"></div>
       <div className="h-10 bg-gray-100 dark:bg-slate-800 rounded-lg"></div>
-      <div className="h-10 bg-gray-100 dark:bg-slate-800 rounded-lg"></div>
-    </div>
+      <div className="h-24 bg-gray-100 dark:bg-slate-800 rounded-lg"></div>
+      <div className="h-24 bg-gray-100 dark:bg-slate-800 rounded-lg"></div>
 
-    <div className="h-20 bg-gray-100 dark:bg-slate-800 rounded-xl"></div>
-    <div className="h-10 bg-gray-100 dark:bg-slate-800 rounded-lg"></div>
-    <div className="h-24 bg-gray-100 dark:bg-slate-800 rounded-lg"></div>
-    <div className="h-24 bg-gray-100 dark:bg-slate-800 rounded-lg"></div>
-    
-    <div className="flex justify-end">
-      <div className="h-11 bg-gray-200 dark:bg-slate-700 rounded-2xl w-40"></div>
+      <div className="flex justify-end">
+        <div className="h-11 bg-gray-200 dark:bg-slate-700 rounded-2xl w-40"></div>
+      </div>
     </div>
-  </div>
-);
-return (
+  );
+  return (
     <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif] px-1 sm:px-0">
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200 dark:border-slate-700/80">
@@ -214,31 +227,39 @@ return (
 
         <form onSubmit={handleSubmit} className="space-y-6 pt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
             {/* Lista Dinámica de Pacientes - Optimizada para iPads */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-700 dark:text-slate-300">Paciente(s)</label>
-              {formData.selectedPatients.map((patientId: string, index: number) => (
-                <div key={index} className="flex items-center gap-2 transition-all duration-200 fade-in">
-                  <div className="flex-1">
-                    <Select
-                      value={patientId}
-                      onChange={(e: any) => handlePatientChange(index, e.target.value)}
-                      options={patientOptions}
-                    />
+              <label className="text-xs font-bold text-gray-700 dark:text-slate-300">
+                Paciente(s)
+              </label>
+              {formData.selectedPatients.map(
+                (patientId: string, index: number) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 transition-all duration-200 fade-in"
+                  >
+                    <div className="flex-1">
+                      <Select
+                        value={patientId}
+                        onChange={(e: any) =>
+                          handlePatientChange(index, e.target.value)
+                        }
+                        options={patientOptions}
+                      />
+                    </div>
+                    {formData.selectedPatients.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemovePatientSelect(index)}
+                        className="p-2.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
+                        title="Eliminar paciente"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
-                  {formData.selectedPatients.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemovePatientSelect(index)}
-                      className="p-2.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
-                      title="Eliminar paciente"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              ))}
+                ),
+              )}
               <button
                 type="button"
                 onClick={handleAddPatientSelect}

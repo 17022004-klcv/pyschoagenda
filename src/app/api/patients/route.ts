@@ -3,11 +3,11 @@ import { db } from "@/lib/firebase";
 import {
   collection,
   getDocs,
-  addDoc,
   query,
   orderBy,
   serverTimestamp,
 } from "firebase/firestore";
+import { addDocWithLog } from "@/lib/firestoreLogger";
 
 // 🟢 GET /api/patients -> Consultar todos los pacientes desde Firestore
 export async function GET() {
@@ -31,25 +31,45 @@ export async function GET() {
   }
 }
 
-// 🟢 POST /api/patients -> Guardar nuevo paciente en Firestore
+// 🟢 POST /api/patients -> Guardar nuevo paciente en Firestore con Auditoría
 export async function POST(request: Request) {
   try {
     const body = await request.json();
 
+    // Separamos el usuario del resto de los datos del paciente
+    const { user, ...patientData } = body;
+
+    // Validación estricta para la bitácora
+    if (!user || !user.uid) {
+      return NextResponse.json(
+        {
+          message:
+            "Se requiere un usuario autenticado válido para registrar el evento en la bitácora.",
+        },
+        { status: 400 },
+      );
+    }
+
     const newPatientData = {
-      ...body,
+      ...patientData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
 
-    const docRef = await addDoc(collection(db, "patients"), newPatientData);
+    // 🟢 Guardar paciente y registrar la auditoría INSERT
+    const docRef = await addDocWithLog(
+      "patients",
+      newPatientData,
+      user,
+      `Paciente registrado: ${patientData.name || "Sin Nombre"}`,
+    );
 
     return NextResponse.json(
       { id: docRef.id, ...newPatientData },
       { status: 201 },
     );
   } catch (error: any) {
-    console.error("Error al guardar en Firestore:", error);
+    console.error("Error al guardar en Firestore con Auditoría:", error);
     return NextResponse.json(
       { message: "Error al guardar el paciente", error: error.message },
       { status: 400 },

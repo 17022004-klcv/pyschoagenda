@@ -2,6 +2,8 @@ import { Appointment, CreateAppointmentDTO } from "@/types/appointment";
 import { UserContext } from "@/types/auditLog";
 import { logAuditEvent } from "@/services/logger.service";
 
+export type TherapyType = string;
+
 export const AppointmentService = {
   // 🟢 GET: Obtener todas las citas
   getAll: async (): Promise<Appointment[]> => {

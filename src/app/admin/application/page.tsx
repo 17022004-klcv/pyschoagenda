@@ -111,22 +111,21 @@ export default function ApplicationPage() {
 
     return matchesSearch && matchesStatus;
   });
-
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif] px-1 sm:px-0">
-      {/* Encabezado */}
+      {/* Header + Buscador y Filtro */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
             Solicitudes de Acceso
           </h1>
-          <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">
+          <p className="text-xs font-medium text-gray-500 dark:text-slate-400 mt-1">
             Gestiona los nuevos registros e ingresantes de la plataforma.
           </p>
         </div>
 
-        {/* Buscador y Filtro */}
         <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+          {/* Buscador de estilo Pacientes */}
           <div className="relative flex-1 sm:w-64">
             <Search className="w-4 h-4 text-gray-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -134,14 +133,15 @@ export default function ApplicationPage() {
               placeholder="Buscar por nombre o correo..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-[#F8F9FA] dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-2xl text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"
+              className="w-full pl-10 pr-4 py-2.5 bg-[#F8F9FA] dark:bg-slate-800/80 border border-gray-200/80 dark:border-slate-700/80 rounded-2xl text-xs font-medium text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-all shadow-2xs"
             />
           </div>
 
+          {/* Filtro por estado */}
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as any)}
-            className="px-3 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-xs font-semibold text-gray-700 dark:text-slate-200 focus:outline-none"
+            className="px-3.5 py-2.5 bg-[#F8F9FA] dark:bg-slate-800/80 border border-gray-200/80 dark:border-slate-700/80 rounded-2xl text-xs font-semibold text-gray-700 dark:text-slate-200 focus:outline-none focus:border-purple-500 transition-all shadow-2xs cursor-pointer"
           >
             <option value="pending">Pendientes</option>
             <option value="active">Activos</option>
@@ -151,11 +151,38 @@ export default function ApplicationPage() {
         </div>
       </div>
 
-      {/* Estado Carga / Error / Lista */}
+      {/* 💀 SKELETON DE CARGA / ERROR / LISTA */}
       {loading ? (
-        <div className="flex items-center justify-center py-16 gap-2 text-gray-500 dark:text-slate-400 text-sm">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          Cargando solicitudes de Firestore...
+        <div className="grid gap-4">
+          {[...Array(4)].map((_, idx) => (
+            <div
+              key={idx}
+              className="p-4 bg-white dark:bg-slate-900 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-pulse"
+            >
+              <div className="flex items-center gap-3.5">
+                {/* Avatar Skeleton */}
+                <div className="w-11 h-11 rounded-full bg-gray-200 dark:bg-slate-800 shrink-0" />
+
+                {/* Info Text Skeleton */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 bg-gray-200 dark:bg-slate-800 rounded-lg w-32" />
+                    <div className="h-4 bg-gray-100 dark:bg-slate-800/60 rounded-full w-16" />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="h-3 bg-gray-100 dark:bg-slate-800/80 rounded-md w-28" />
+                    <div className="h-3 bg-gray-100 dark:bg-slate-800/80 rounded-md w-20" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions Skeleton */}
+              <div className="flex items-center gap-2 self-end sm:self-center">
+                <div className="h-9 w-24 bg-gray-200 dark:bg-slate-800 rounded-xl" />
+                <div className="h-9 w-36 bg-gray-200 dark:bg-slate-800 rounded-xl" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : error ? (
         <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 flex items-center gap-3 text-rose-600 dark:text-rose-400 text-xs font-semibold">
@@ -165,27 +192,27 @@ export default function ApplicationPage() {
       ) : (
         <div className="grid gap-4">
           {filteredRequests.length === 0 ? (
-            <div className="text-center py-12 bg-white dark:bg-slate-800/50 rounded-2xl border border-gray-200/80 dark:border-slate-700/80">
+            <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-xs">
               <Clock className="w-8 h-8 text-gray-300 dark:text-slate-600 mx-auto mb-2" />
               <p className="text-sm font-semibold text-gray-600 dark:text-slate-300">
-                No hay solicitudes pendientes en Firestore
+                No hay solicitudes disponibles
               </p>
             </div>
           ) : (
             filteredRequests.map((req) => (
               <div
                 key={req.uid}
-                className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200/80 dark:border-slate-700/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all"
+                className="p-4 bg-white dark:bg-slate-900 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-gray-200 dark:hover:border-slate-700"
               >
                 <div className="flex items-center gap-3.5">
                   {req.photoURL ? (
                     <img
                       src={req.photoURL}
                       alt={req.name}
-                      className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-slate-700"
+                      className="w-11 h-11 rounded-full object-cover border border-gray-100 dark:border-slate-800 shadow-2xs"
                     />
                   ) : (
-                    <div className="w-11 h-11 rounded-full bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-300 flex items-center justify-center font-bold text-sm">
+                    <div className="w-11 h-11 rounded-full bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-300 flex items-center justify-center font-bold text-sm border border-purple-100/50 dark:border-purple-900/30">
                       {req.name ? req.name.charAt(0) : "U"}
                     </div>
                   )}
@@ -194,12 +221,12 @@ export default function ApplicationPage() {
                     <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                       {req.name}
                       {req.role && req.role !== "unassigned" && (
-                        <span className="px-2 py-0.5 text-[10px] font-semibold bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-300 rounded-full border border-blue-100 dark:border-blue-900">
+                        <span className="px-2.5 py-0.5 text-[10px] font-semibold bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-300 rounded-full border border-blue-100 dark:border-blue-900">
                           {req.role}
                         </span>
                       )}
                     </h3>
-                    <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500 dark:text-slate-400">
+                    <div className="flex items-center gap-2.5 mt-0.5 text-xs text-gray-500 dark:text-slate-400 font-medium">
                       <span className="flex items-center gap-1">
                         <Mail className="w-3.5 h-3.5" />
                         {req.email}
@@ -231,7 +258,7 @@ export default function ApplicationPage() {
                         type="button"
                         disabled={actionLoading}
                         onClick={() => handleOpenApproveModal(req)}
-                        className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer disabled:opacity-50"
+                        className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer disabled:opacity-50"
                       >
                         <UserCheck className="w-4 h-4" />
                         <span>Aprobar y Asignar Rol</span>
@@ -262,7 +289,7 @@ export default function ApplicationPage() {
       {/* Modal para Aprobar y Asignar Rol */}
       {isModalOpen && selectedRequest && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-gray-100 dark:border-slate-700">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-gray-100 dark:border-slate-800">
             <div>
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                 Aprobar Solicitud de Acceso
@@ -282,7 +309,7 @@ export default function ApplicationPage() {
                 className={`p-3.5 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all ${
                   assignedRole === "psychologist"
                     ? "border-purple-600 bg-purple-50/50 dark:bg-purple-950/30 text-purple-900 dark:text-purple-200"
-                    : "border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-gray-700 dark:text-slate-300"
+                    : "border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800/50 text-gray-700 dark:text-slate-300"
                 }`}
               >
                 <Shield className="w-5 h-5 text-purple-600 shrink-0" />
@@ -299,7 +326,7 @@ export default function ApplicationPage() {
                 className={`p-3.5 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all ${
                   assignedRole === "receptionist"
                     ? "border-purple-600 bg-purple-50/50 dark:bg-purple-950/30 text-purple-900 dark:text-purple-200"
-                    : "border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-gray-700 dark:text-slate-300"
+                    : "border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800/50 text-gray-700 dark:text-slate-300"
                 }`}
               >
                 <User className="w-5 h-5 text-blue-600 shrink-0" />
@@ -317,7 +344,7 @@ export default function ApplicationPage() {
                 type="button"
                 disabled={actionLoading}
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2.5 rounded-2xl border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                className="px-4 py-2.5 rounded-2xl border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
               >
                 Cancelar
               </button>
@@ -325,7 +352,7 @@ export default function ApplicationPage() {
                 type="button"
                 disabled={actionLoading}
                 onClick={handleConfirmApproval}
-                className="px-4 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
+                className="px-4 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold flex items-center gap-2 transition-colors shadow-xs disabled:opacity-50"
               >
                 {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                 Confirmar y Activar Acceso

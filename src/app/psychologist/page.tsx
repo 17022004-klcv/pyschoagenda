@@ -14,7 +14,8 @@ import {
   Appointment,
   AppointmentService,
 } from "@/services/inicioRecep.service";
-import { Patient, PatientService } from "@/services/patient.service";
+import { PatientService } from "@/services/patient.service";
+import { Patient } from "@/types/patient";
 import { StatCard } from "@/components/ui/StatCard";
 import { showAlert } from "@/lib/sweetalert"; // 👈 Asegúrate de que esta sea la ruta correcta a tu helper
 
@@ -207,26 +208,36 @@ export default function RecepcionistPage() {
   };
 
   // 🟢 Componente Skeleton para las tarjetas KPI (Stats)
-const StatCardSkeleton = () => (
-  <div className="p-5 rounded-3xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 shadow-sm animate-pulse space-y-3">
-    <div className="flex items-center justify-between">
-      <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-24"></div>
-      <div className="h-6 w-16 bg-gray-200 dark:bg-slate-700 rounded-full"></div>
+  const StatCardSkeleton = () => (
+    <div className="p-5 rounded-3xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 shadow-sm animate-pulse space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-24"></div>
+        <div className="h-6 w-16 bg-gray-200 dark:bg-slate-700 rounded-full"></div>
+      </div>
+      <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded w-16 mt-2"></div>
     </div>
-    <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded w-16 mt-2"></div>
-  </div>
-);
+  );
 
-const TableRowSkeleton = () => (
-  <tr className="animate-pulse">
-    <td className="py-4 px-6"><div className="h-6 bg-gray-100 dark:bg-slate-700 rounded-lg w-20"></div></td>
-    <td className="py-4 px-6"><div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-40"></div></td>
-    <td className="py-4 px-6"><div className="h-4 bg-gray-100 dark:bg-slate-700 rounded w-24"></div></td>
-    <td className="py-4 px-6"><div className="h-6 bg-gray-100 dark:bg-slate-700 rounded-full w-24"></div></td>
-    <td className="py-4 px-6 text-right"><div className="h-8 bg-gray-200 dark:bg-slate-700 rounded-xl w-32 ml-auto"></div></td>
-  </tr>
-);
-return (
+  const TableRowSkeleton = () => (
+    <tr className="animate-pulse">
+      <td className="py-4 px-6">
+        <div className="h-6 bg-gray-100 dark:bg-slate-700 rounded-lg w-20"></div>
+      </td>
+      <td className="py-4 px-6">
+        <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-40"></div>
+      </td>
+      <td className="py-4 px-6">
+        <div className="h-4 bg-gray-100 dark:bg-slate-700 rounded w-24"></div>
+      </td>
+      <td className="py-4 px-6">
+        <div className="h-6 bg-gray-100 dark:bg-slate-700 rounded-full w-24"></div>
+      </td>
+      <td className="py-4 px-6 text-right">
+        <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded-xl w-32 ml-auto"></div>
+      </td>
+    </tr>
+  );
+  return (
     <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif] px-1 sm:px-0">
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -300,7 +311,7 @@ return (
         {loading ? (
           // 🟢 Skeleton para la tabla
           <div className="overflow-x-auto">
-             <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50/70 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700/80 text-[11px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider">
                   <th className="py-3.5 px-6">Hora</th>
