@@ -9,9 +9,9 @@ import {
 } from "firebase/auth";
 import { auth, googleProvider, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
-// 🟢 Skeleton de carga para el Login
+// Skeleton de carga para el Login
 const LoginSkeleton = () => {
   return (
     <div className="w-full max-w-sm flex flex-col items-center animate-pulse space-y-4">
@@ -41,9 +41,11 @@ export default function LoginPage() {
     setInitialMounting(false);
   }, []);
 
+  // 1. Manejo del Login con Google
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError("");
+
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
@@ -51,29 +53,38 @@ export default function LoginPage() {
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
 
-      let role = "receptionist";
+      let role = "unassigned";
+      let status = "pending";
 
-      if (userSnap.exists()) {
-        const userData = userSnap.data();
-
-        // 🛑 VALIDACIÓN DE USUARIO INACTIVO
-        if (userData.status === "inactive") {
-          await signOut(auth);
-          setError("Tu cuenta está inactiva. Consulta con el administrador.");
-          return;
-        }
-
-        role = userData.role || "receptionist";
-      } else {
+      if (!userSnap.exists()) {
+        // Usuario nuevo: Se registra como PENDING
         await setDoc(userRef, {
           uid: user.uid,
-          name: user.displayName,
-          email: user.email,
-          photoURL: user.photoURL,
-          role: "receptionist",
-          status: "active", // Por defecto activo al registrar
-          createdAt: new Date(),
+          name: user.displayName || "Usuario Nuevo",
+          email: user.email || "",
+          phone: user.phoneNumber || "",
+          photoURL: user.photoURL || "",
+          role: "unassigned",
+          status: "pending",
+          createdAt: serverTimestamp(),
         });
+      } else {
+        // Usuario existente: Lee sus datos reales de Firestore
+        const userData = userSnap.data();
+        role = userData.role || "unassigned";
+        status = userData.status || "pending";
+      }
+
+      // Evaluar accesos según status y role
+      if (status === "pending" || role === "unassigned") {
+        router.push("/pending");
+        return;
+      }
+
+      if (status === "inactive" || status === "rejected") {
+        await signOut(auth);
+        setError("Tu cuenta no tiene un acceso activo habilitado.");
+        return;
       }
 
       if (role === "psychologist") {
@@ -84,13 +95,14 @@ export default function LoginPage() {
         router.push("/recepcionist");
       }
     } catch (err: any) {
-      if (!error) setError("Error al iniciar sesión con Google.");
-      console.error(err);
+      console.error("Error en Google Login:", err);
+      setError("Error al autenticar con Google.");
     } finally {
       setLoading(false);
     }
   };
 
+  // 2. Manejo del Login con Email y Password
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -112,27 +124,37 @@ export default function LoginPage() {
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
 
-      let role = "receptionist";
-
       if (userSnap.exists()) {
         const userData = userSnap.data();
 
-        // 🛑 VALIDACIÓN DE USUARIO INACTIVO
+        // Control de cuentas inactivas, pendientes o rechazadas
         if (userData.status === "inactive") {
           await signOut(auth);
           setError("Tu cuenta está inactiva. Consulta con el administrador.");
           return;
         }
 
-        role = userData.role || "receptionist";
-      }
+        if (userData.status === "pending") {
+          router.push("/pending");
+          return;
+        }
 
-      if (role === "psychologist") {
-        router.push("/psychologist");
-      } else if (role === "admin") {
-        router.push("/admin/users");
+        if (userData.status === "rejected") {
+          await signOut(auth);
+          setError("Tu solicitud de acceso fue rechazada.");
+          return;
+        }
+
+        const role = userData.role;
+        if (role === "psychologist") {
+          router.push("/psychologist");
+        } else if (role === "admin") {
+          router.push("/admin/users");
+        } else {
+          router.push("/recepcionist");
+        }
       } else {
-        router.push("/recepcionist");
+        setError("No se encontraron datos asociados a esta cuenta.");
       }
     } catch (err: any) {
       console.error(err);

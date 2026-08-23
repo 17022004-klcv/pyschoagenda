@@ -1,9 +1,12 @@
 import { Timestamp } from "firebase/firestore";
 
-export type UserRole = "admin" | "psychologist" | "receptionist";
-export type UserStatus = "active" | "inactive";
+// Extendemos los roles para incluir usuarios no asignados que acaban de registrarse con Google
+export type UserRole = "admin" | "psychologist" | "receptionist" | "unassigned";
 
-// Firestore Document
+// Extendemos los estados para manejar el flujo de aprobación
+export type UserStatus = "active" | "inactive" | "pending" | "rejected";
+
+// Firestore Document (Mantenemos tu estructura original)
 export interface UserDocument {
   uid: string;
   name: string;
@@ -15,7 +18,7 @@ export interface UserDocument {
   createdAt: Timestamp;
 }
 
-// UI Model
+// UI Model (Mantenemos tu estructura original)
 export interface UserAccount {
   uid: string;
   name: string;
@@ -27,7 +30,7 @@ export interface UserAccount {
   createdAt: string;
 }
 
-// Data para creación / edición
+// Data para creación / edición (Mantenemos tu estructura original)
 export interface UserFormData {
   name: string;
   email: string;
@@ -35,5 +38,15 @@ export interface UserFormData {
   role: UserRole;
   status: UserStatus;
   photoURL: string;
-  password?: string; // Requerida solo al crear o si el admin la cambia
+  password?: string;
+}
+
+// DTOs específicos para las acciones del Admin al aprobar/rechazar solicitudes
+export interface ApproveUserPayload {
+  uid: string;
+  role: Extract<UserRole, "psychologist" | "receptionist">;
+}
+
+export interface RejectUserPayload {
+  uid: string;
 }
