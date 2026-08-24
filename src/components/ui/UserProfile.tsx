@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { showAlert } from "@/lib/sweetalert";
 import { uploadImageToImgBB } from "@/lib/imgbb";
+import { formatters } from "@/lib/validators";
 
 export interface UserProfileData {
   id: string;
@@ -111,7 +112,24 @@ const UserProfileForm: React.FC<{
   }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    let formattedValue = value;
+
+    // 🟢 Formateos dinámicos según el nombre del input
+    if (name === "name") {
+      formattedValue = formatters.maxLength(value, 60);
+    } else if (name === "newPassword" || name === "confirmPassword") {
+      formattedValue = formatters.maxLength(value, 30);
+    } else if (name === "phone") {
+      formattedValue = formatters.phone(value);
+    } else if (name === "dui") {
+      formattedValue = formatters.dui(value);
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: formattedValue,
+    }));
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

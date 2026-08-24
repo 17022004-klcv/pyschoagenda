@@ -40,6 +40,7 @@ import { PatientPdfDocument } from "@/components/pdf/PatientPdfDocument";
 import { PatientListPdfDocument } from "@/components/pdf/PatientListPdfDocument";
 import { ConsentPdfDocument } from "@/components/pdf/ConsentPdfDocument";
 import { useAuth } from "@/lib/AuthContext";
+import { formatters } from "@/lib/validators";
 
 export default function PatientsPage() {
   const { userData } = useAuth();
@@ -542,7 +543,9 @@ export default function PatientsPage() {
               type="text"
               placeholder="Buscar por nombre, DUI o tutor..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) =>
+                setSearchTerm(formatters.maxLength(e.target.value, 50))
+              }
               className="w-full pl-10 pr-4 py-2.5 bg-[#F8F9FA] dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-2xl text-sm font-medium text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 transition-all"
             />
           </div>
@@ -749,7 +752,7 @@ export default function PatientsPage() {
           placeholder="Ej: Sofía Martínez"
           value={name}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setName(e.target.value)
+            setName(formatters.maxLength(e.target.value, 60))
           }
           required
         />
@@ -787,7 +790,7 @@ export default function PatientsPage() {
             placeholder="00000000-0"
             value={isMinor ? "" : dui}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setDui(e.target.value)
+              setDui(formatters.dui(e.target.value))
             }
             required={!isMinor && birthDate !== ""}
           />
@@ -796,7 +799,7 @@ export default function PatientsPage() {
             placeholder="0000-0000"
             value={phone}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setPhone(e.target.value)
+              setPhone(formatters.phone(e.target.value))
             }
             required
           />

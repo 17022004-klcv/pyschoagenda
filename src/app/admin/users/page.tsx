@@ -34,6 +34,7 @@ import { Table, Column } from "@/components/ui/Table";
 import { Select } from "@/components/ui/Select";
 import { ModalSheet } from "@/components/ui/Modal";
 import { UsersListPDF, SingleUserPDF } from "@/components/pdf/UserPDF";
+import { formatters } from "@/lib/validators";
 
 export default function UsersPage() {
   const { userData } = useAuth();
@@ -416,7 +417,9 @@ export default function UsersPage() {
               type="text"
               placeholder="Buscar por nombre o correo..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) =>
+                setSearchTerm(formatters.maxLength(e.target.value, 30))
+              }
               className="w-full pl-10 pr-4 py-2.5 bg-[#F8F9FA] dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-2xl text-sm font-medium text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"
             />
           </div>
@@ -587,7 +590,10 @@ export default function UsersPage() {
               required
               value={formData.name}
               onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
+                setFormData({
+                  ...formData,
+                  name: formatters.maxLength(e.target.value, 60),
+                })
               }
               placeholder="Ej. Karla Villanueva"
               className="w-full px-3.5 py-2.5 bg-[#F8F9FA] dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-2xl text-sm font-medium text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"
@@ -619,9 +625,12 @@ export default function UsersPage() {
                 type="text"
                 value={formData.phone}
                 onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
+                  setFormData({
+                    ...formData,
+                    phone: formatters.phone(e.target.value),
+                  })
                 }
-                placeholder="+503 7000-0000"
+                placeholder="0000-0000"
                 className="w-full px-3.5 py-2.5 bg-[#F8F9FA] dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-2xl text-sm font-medium text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"
               />
             </div>
@@ -642,7 +651,10 @@ export default function UsersPage() {
               required={!selectedUser}
               value={formData.password || ""}
               onChange={(e) =>
-                setFormData({ ...formData, password: e.target.value })
+                setFormData({
+                  ...formData,
+                  password: formatters.maxLength(e.target.value, 30),
+                })
               }
               placeholder={selectedUser ? "••••••••" : "Mínimo 6 caracteres"}
               className="w-full px-3.5 py-2.5 bg-[#F8F9FA] dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-2xl text-sm font-medium text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"

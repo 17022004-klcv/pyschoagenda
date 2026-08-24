@@ -20,13 +20,16 @@ import { Select } from "@/components/ui/Select";
 import { ModalSheet as Modal } from "@/components/ui/Modal";
 import { Table, Column } from "@/components/ui/Table";
 import { SignaturePad } from "@/components/ui/SignaturePad";
-
-import { PatientService, Patient } from "@/services/patient.service";
+import { formatters } from "@/lib/validators";
+import { PatientService } from "@/services/patient.service";
+import { Patient } from "@/types/patient";
 import { showAlert } from "@/lib/sweetalert";
 import { PatientPdfDocument } from "@/components/pdf/PatientPdfDocument";
 import { ConsentPdfDocument } from "@/components/pdf/ConsentPdfDocument";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function ConsentsPage() {
+  const { currentUser } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<
@@ -94,8 +97,19 @@ export default function ConsentsPage() {
       consentSignature: signatureDataUrl,
     };
 
+    const fallbackUser = currentUser || {
+      uid: "",
+      name: "Usuario",
+      email: "",
+      role: "recepcionista",
+    };
+
     try {
-      await PatientService.update(selectedPatient.id, updatedPatientData);
+      await PatientService.update(
+        selectedPatient.id,
+        updatedPatientData,
+        fallbackUser, // 👈 Pasas el usuario autenticado o el fallback
+      );
       showAlert.successToast("Consentimiento firmado y guardado con éxito");
       await fetchPatients();
       setIsConsentModalOpen(false);
@@ -128,7 +142,18 @@ export default function ConsentsPage() {
   const handleDownloadSinglePdf = async (patient: Patient) => {
     try {
       showAlert.successToast("Generando Ficha PDF...");
-      const blob = await pdf(<PatientPdfDocument patient={patient} />).toBlob();
+      const safePatient = {
+        ...patient,
+        gender: patient.gender || "No especificado",
+        birthDate: patient.birthDate || "No registrada",
+        age: patient.age ?? 0,
+        status: patient.status || "Activo",
+        isMinor: patient.isMinor ?? false,
+      };
+
+      const blob = await pdf(
+        <PatientPdfDocument patient={safePatient} />,
+      ).toBlob();
       const url = URL.createObjectURL(blob);
 
       const a = document.createElement("a");
@@ -300,7 +325,9 @@ export default function ConsentsPage() {
               type="text"
               placeholder="Buscar paciente, DUI o tutor..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) =>
+                setSearchTerm(formatters.maxLength(e.target.value, 30))
+              }
               className="w-full pl-10 pr-4 py-2.5 bg-[#F8F9FA] dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-2xl text-sm font-medium text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 transition-all"
             />
           </div>

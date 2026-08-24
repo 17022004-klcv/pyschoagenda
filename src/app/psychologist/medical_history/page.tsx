@@ -25,6 +25,8 @@ import { SessionDetailPdfDocument } from "@/components/pdf/SessionDetailPdfDocum
 import { AppointmentProofPdfDocument } from "@/components/pdf/AppointmentProofPdfDocument";
 import { FullExpedientPdfDocument } from "@/components/pdf/FullExpedientPdfDocument";
 import { useAuth } from "@/lib/AuthContext";
+import { showAlert } from "@/lib/sweetalert";
+import { formatters } from "@/lib/validators";
 
 const THERAPY_OPTIONS = [
   { value: "TODAS", label: "Todas las terapias" },
@@ -300,9 +302,12 @@ export default function MedicalHistoryPage() {
       );
 
       setIsEditOpen(false);
+
+      // 🟢 Alerta simple en el flujo correcto
+      showAlert.successToast("¡La sesión se ha actualizado correctamente!");
     } catch (error) {
       console.error("Error al actualizar la sesión:", error);
-      alert("No se pudo actualizar la sesión.");
+      showAlert.errorToast("No se pudo actualizar la sesión.");
     } finally {
       setIsSaving(false);
     }
@@ -816,8 +821,11 @@ export default function MedicalHistoryPage() {
               </label>
               <Input
                 value={editFormData.theme}
-                onChange={(e: any) =>
-                  setEditFormData({ ...editFormData, theme: e.target.value })
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setEditFormData({
+                    ...editFormData,
+                    theme: formatters.maxLength(e.target.value, 100),
+                  })
                 }
               />
             </div>

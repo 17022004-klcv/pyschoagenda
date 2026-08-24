@@ -17,6 +17,7 @@ import {
 import { UserAccount, UserRole } from "@/types/user";
 import { adminService } from "@/services/admin.service";
 import { useAuth } from "@/lib/AuthContext";
+import { formatters } from "@/lib/validators";
 
 export default function ApplicationPage() {
   const { userData } = useAuth();
@@ -132,7 +133,9 @@ export default function ApplicationPage() {
               type="text"
               placeholder="Buscar por nombre o correo..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) =>
+                setSearchTerm(formatters.maxLength(e.target.value, 30))
+              }
               className="w-full pl-10 pr-4 py-2.5 bg-[#F8F9FA] dark:bg-slate-800/80 border border-gray-200/80 dark:border-slate-700/80 rounded-2xl text-xs font-medium text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-all shadow-2xs"
             />
           </div>

@@ -14,6 +14,7 @@ import {
   History,
   FileText,
 } from "lucide-react";
+import RoleGuard from "@/components/auth/RoleGuard";
 
 // Estructura de navegación para el Administrador
 const adminGroups: SidebarGroup[] = [
@@ -101,16 +102,18 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors">
-      <aside className="sticky top-0 h-screen flex-shrink-0 z-20">
-        <Sidebar
-          title="Centro Psicológico"
-          subtitle="Integral Sensuntepeque"
-          logoUrl="/logo.png"
-          groups={adminGroups}
-        />
-      </aside>
-      <main className="flex-1 p-6 md:p-8 overflow-y-auto">{children}</main>
-    </div>
+    <RoleGuard allowedRoles={["admin"]}>
+      <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors">
+        <aside className="sticky top-0 h-screen flex-shrink-0 z-20">
+          <Sidebar
+            title="Centro Psicológico"
+            subtitle="Integral Sensuntepeque"
+            logoUrl="/logo.png"
+            groups={adminGroups}
+          />
+        </aside>
+        <main className="flex-1 p-6 md:p-8 overflow-y-auto">{children}</main>
+      </div>
+    </RoleGuard>
   );
 }

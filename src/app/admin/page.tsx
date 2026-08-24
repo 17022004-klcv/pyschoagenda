@@ -14,7 +14,8 @@ import {
   Appointment,
   AppointmentService,
 } from "@/services/inicioRecep.service";
-import { Patient, PatientService } from "@/services/patient.service";
+import { PatientService } from "@/services/patient.service";
+import { Patient } from "@/types/patient";
 import { StatCard } from "@/components/ui/StatCard";
 import { showAlert } from "@/lib/sweetalert"; // 👈 Asegúrate de que esta sea la ruta correcta a tu helper
 

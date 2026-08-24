@@ -34,6 +34,7 @@ import {
   TherapyType,
   AppointmentStatus,
 } from "@/types/appointment";
+import { formatters } from "@/lib/validators";
 
 const THERAPY_OPTIONS: TherapyType[] = [
   "Terapia Individual",
@@ -477,7 +478,9 @@ export default function AppointmentsPage() {
                   type="text"
                   placeholder="Buscar..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) =>
+                    setSearchTerm(formatters.maxLength(e.target.value, 30))
+                  }
                   className="w-full pl-10 pr-4 py-2.5 bg-[#F8F9FA] dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-sm font-medium text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
                 />
               </div>

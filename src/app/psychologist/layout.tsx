@@ -9,6 +9,7 @@ import {
   NotebookIcon,
   User,
 } from "lucide-react";
+import RoleGuard from "@/components/auth/RoleGuard";
 
 // Opciones de navegación con rutas ÚNICAS
 const psychologistGroups: SidebarGroup[] = [
@@ -55,14 +56,16 @@ export default function PsychologistLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-[#FFFFFF]">
-      <Sidebar
-        title="Centro Psicologico"
-        subtitle="Integral Sensuntepeque"
-        logoUrl="/logo.png"
-        groups={psychologistGroups}
-      />
-      <main className="flex-1 p-6 md:p-8 overflow-y-auto">{children}</main>
-    </div>
+    <RoleGuard allowedRoles={["psychologist", "admin"]}>
+      <div className="flex min-h-screen bg-[#FFFFFF]">
+        <Sidebar
+          title="Centro Psicologico"
+          subtitle="Integral Sensuntepeque"
+          logoUrl="/logo.png"
+          groups={psychologistGroups}
+        />
+        <main className="flex-1 p-6 md:p-8 overflow-y-auto">{children}</main>
+      </div>
+    </RoleGuard>
   );
 }

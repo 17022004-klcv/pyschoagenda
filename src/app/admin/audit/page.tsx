@@ -15,6 +15,7 @@ import {
 import { AuditLogUI, AuditAction, AuditCollection } from "@/types/auditLog";
 import { auditService } from "@/services/audit.service";
 import { Table, Column } from "@/components/ui/Table";
+import { formatters } from "@/lib/validators";
 
 export default function AuditLogPage() {
   const [logs, setLogs] = useState<AuditLogUI[]>([]);
@@ -194,7 +195,9 @@ export default function AuditLogPage() {
             type="text"
             placeholder="Buscar por usuario, detalles o ID..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) =>
+              setSearchTerm(formatters.maxLength(e.target.value, 30))
+            }
             className="w-full pl-10 pr-4 py-2.5 bg-[#F8F9FA] dark:bg-slate-800/80 border border-gray-200/80 dark:border-slate-700/80 rounded-2xl text-xs font-medium text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-all shadow-2xs"
           />
         </div>

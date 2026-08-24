@@ -11,7 +11,8 @@ import { PatientService } from "@/services/patient.service";
 import { TherapyType } from "@/services/appointment.service";
 import { ExpedientService } from "@/services/expedient.service";
 import { Patient } from "@/types/patient"; // O la interfaz/tipo de tu paciente
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/lib/AuthContext";
+import { formatters } from "@/lib/validators";
 
 const THERAPY_OPTIONS: TherapyType[] = [
   "Terapia Individual",
@@ -34,6 +35,8 @@ export default function SessionPage() {
     month: "2-digit",
     year: "numeric",
   });
+
+  const { currentUser } = useAuth();
 
   const [rawPatients, setRawPatients] = useState<Patient[]>([]);
   const [patientOptions, setPatientOptions] = useState<
@@ -140,14 +143,20 @@ export default function SessionPage() {
       const patientIds = selectedPatientsData.map((p) => p.id);
       const patientNames = selectedPatientsData.map((p) => p.name);
 
-      // 🟢 2. Generar u obtener el expediente pasando el usuario autenticado para la auditoría
+      const fallbackUser = currentUser || {
+        uid: user?.uid || "",
+        name: user?.displayName || user?.email?.split("@")[0] || "Usuario",
+        email: user?.email || "",
+        role: "psicologo",
+      };
+
       const expedient = await ExpedientService.getOrCreateExpedient(
         {
           patientIds,
           patientNames,
           therapyType: formData.therapyType,
         },
-        user, // 👈 Se agrega el argumento 'user' obligatorio
+        fallbackUser, // 🟢 Pasamos el contexto del usuario con name y role
       );
 
       // 🟢 3. Crear la sesión pasando el código real obtenido y el usuario autenticado
@@ -163,7 +172,7 @@ export default function SessionPage() {
           analysis: formData.analysis,
           date: currentDate,
         },
-        user, // 👈 Se agrega el argumento 'user' obligatorio
+        fallbackUser, // 👈 Se agrega el argumento 'user' obligatorio
       );
 
       showAlert?.successToast
@@ -331,8 +340,11 @@ export default function SessionPage() {
             <Input
               placeholder="Ej. Manejo de ansiedad, duelo, dinámica familiar..."
               value={formData.theme}
-              onChange={(e: any) =>
-                setFormData({ ...formData, theme: e.target.value })
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setFormData({
+                  ...formData,
+                  theme: formatters.maxLength(e.target.value, 100),
+                })
               }
             />
           </div>

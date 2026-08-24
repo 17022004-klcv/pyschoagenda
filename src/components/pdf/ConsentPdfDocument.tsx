@@ -1,7 +1,7 @@
 import React from "react";
 import { Text, View, StyleSheet, Image } from "@react-pdf/renderer";
 import { PdfLayout } from "./PdfLayout";
-import { Patient } from "@/services/patient.service";
+import { Patient } from "@/types/patient";
 
 const styles = StyleSheet.create({
   boxSection: {

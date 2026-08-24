@@ -1,7 +1,7 @@
 import React from "react";
 import { Text, View, StyleSheet } from "@react-pdf/renderer";
 import { PdfLayout } from "./PdfLayout";
-import { Patient } from "@/services/patient.service";
+import { Patient } from "@/types/patient";
 
 const styles = StyleSheet.create({
   filterBadge: {

@@ -10,6 +10,7 @@ import {
 import { auth, googleProvider, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { formatters } from "@/lib/validators";
 
 // Skeleton de carga para el Login
 const LoginSkeleton = () => {
@@ -235,7 +236,9 @@ export default function LoginPage() {
                 type="password"
                 placeholder="Contraseña"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) =>
+                  setPassword(formatters.maxLength(e.target.value, 40))
+                }
                 disabled={loading}
                 className="w-full px-4 py-2.5 text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-gray-800 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 disabled:opacity-50"
               />

@@ -30,6 +30,7 @@ import {
   TherapyCategoryFormData,
 } from "@/types/therapyCategory";
 import { useAuth } from "@/lib/AuthContext";
+import { formatters } from "@/lib/validators";
 
 // Componentes UI
 import { Table, Column } from "@/components/ui/Table";
@@ -330,7 +331,9 @@ export default function TherapyCategoriesPage() {
               type="text"
               placeholder="Buscar categoría..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) =>
+                setSearchTerm(formatters.maxLength(e.target.value, 30))
+              }
               className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700/80 rounded-xl text-sm font-medium text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 transition-all"
             />
           </div>
@@ -455,7 +458,10 @@ export default function TherapyCategoriesPage() {
               required
               value={formData.name}
               onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
+                setFormData({
+                  ...formData,
+                  name: formatters.maxLength(e.target.value, 60),
+                })
               }
               placeholder="Ej. Terapia Cognitivo Conductual"
               className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700/80 rounded-xl text-sm font-medium text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
