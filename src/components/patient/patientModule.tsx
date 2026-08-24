@@ -853,7 +853,7 @@ export default function PatientsPage() {
               placeholder="Ej: Mariana de Benítez"
               value={tutorName}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setTutorName(e.target.value)
+                setTutorName(formatters.maxLength(e.target.value, 60))
               }
               required={isMinor}
             />
@@ -876,7 +876,9 @@ export default function PatientsPage() {
                 label="DUI del Responsable"
                 placeholder="00000000-0"
                 value={tutorDui}
-                onChange={(e) => setTutorDui(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setTutorDui(formatters.dui(e.target.value))
+                }
                 required={isMinor}
               />
             </div>

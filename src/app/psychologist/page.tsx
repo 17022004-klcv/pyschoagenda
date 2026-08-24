@@ -207,7 +207,7 @@ export default function RecepcionistPage() {
     }
   };
 
-  // 🟢 Componente Skeleton para las tarjetas KPI (Stats)
+  // 🟢 Componente Skeleton para las KPI Cards
   const StatCardSkeleton = () => (
     <div className="p-5 rounded-3xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 shadow-sm animate-pulse space-y-3">
       <div className="flex items-center justify-between">
@@ -218,25 +218,18 @@ export default function RecepcionistPage() {
     </div>
   );
 
-  const TableRowSkeleton = () => (
-    <tr className="animate-pulse">
-      <td className="py-4 px-6">
-        <div className="h-6 bg-gray-100 dark:bg-slate-700 rounded-lg w-20"></div>
-      </td>
-      <td className="py-4 px-6">
-        <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-40"></div>
-      </td>
-      <td className="py-4 px-6">
-        <div className="h-4 bg-gray-100 dark:bg-slate-700 rounded w-24"></div>
-      </td>
-      <td className="py-4 px-6">
-        <div className="h-6 bg-gray-100 dark:bg-slate-700 rounded-full w-24"></div>
-      </td>
-      <td className="py-4 px-6 text-right">
-        <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded-xl w-32 ml-auto"></div>
-      </td>
-    </tr>
+  // 🟢 Componente Skeleton para la Tabla
+  const TableSkeleton = () => (
+    <div className="p-6 space-y-4 animate-pulse">
+      {[1, 2, 3].map((i) => (
+        <div
+          key={i}
+          className="h-12 bg-gray-100 dark:bg-slate-700/50 rounded-2xl w-full"
+        ></div>
+      ))}
+    </div>
   );
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif] px-1 sm:px-0">
       {/* HEADER */}
@@ -251,7 +244,7 @@ export default function RecepcionistPage() {
         </div>
       </div>
 
-      {/* KPIS - Responsivo: 1 col móvil, 2 cols sm, 3 cols md (iPad) */}
+      {/* KPIS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
         {loading ? (
           <>
@@ -268,7 +261,6 @@ export default function RecepcionistPage() {
               badgeColor="blue"
               icon={<CalendarDays className="w-6 h-6" />}
             />
-
             <StatCard
               title="Citas de Mañana"
               value={tomorrowAppointments.length}
@@ -276,7 +268,6 @@ export default function RecepcionistPage() {
               badgeColor="purple"
               icon={<CalendarCheck className="w-6 h-6" />}
             />
-
             <StatCard
               title="Total de la Semana"
               value={weekAppointments.length}
@@ -288,14 +279,14 @@ export default function RecepcionistPage() {
         )}
       </div>
 
-      {/* TABLA DE CITAS PROGRAMADAS DEL DÍA - Adaptada para Dark Mode y Responsividad */}
+      {/* SECCIÓN DE CITAS PROGRAMADAS */}
       <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-3xl shadow-sm overflow-hidden transition-colors duration-200">
         <div className="p-5 md:p-6 border-b border-gray-100 dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight">
               Citas Programadas de Hoy
             </h2>
-            <p className="text-xs text-gray-400 dark:text-slate-500 font-medium mt-0.5">
+            <p className="text-xs text-gray-500 dark:text-slate-400 font-medium mt-0.5">
               Solo se muestran los pacientes programados para el día de hoy
             </p>
           </div>
@@ -307,96 +298,112 @@ export default function RecepcionistPage() {
           )}
         </div>
 
-        {/* Tabla - Manejo de estados de carga y vacío */}
+        {/* CONTENIDO DE CITAS */}
         {loading ? (
-          // 🟢 Skeleton para la tabla
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50/70 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700/80 text-[11px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider">
-                  <th className="py-3.5 px-6">Hora</th>
-                  <th className="py-3.5 px-6">Paciente</th>
-                  <th className="py-3.5 px-6">Tipo de Sesión</th>
-                  <th className="py-3.5 px-6">Estado</th>
-                  <th className="py-3.5 px-6 text-right">Acción</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-slate-700/60">
-                <TableRowSkeleton />
-                <TableRowSkeleton />
-                <TableRowSkeleton />
-              </tbody>
-            </table>
-          </div>
+          <TableSkeleton />
         ) : sortedPendingAppointments.length === 0 ? (
           <div className="py-12 text-center text-gray-500 dark:text-slate-400 font-medium text-sm px-4">
             🎉 ¡Excelente! No hay citas programadas por atender el día de hoy.
           </div>
         ) : (
-          // 📱💻 VISTA DE TABLA RESPONSIVA
-          <div className="overflow-x-auto">
-            {/* min-w asegura que en móviles se active el scroll horizontal, 
-                pero en iPads (md:min-w-full) ocupe todo el ancho si cabe */}
-            <table className="w-full text-left border-collapse min-w-[600px] md:min-w-full">
-              <thead>
-                <tr className="bg-gray-50/70 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700/80 text-[11px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider">
-                  <th className="py-3.5 px-6">Hora</th>
-                  <th className="py-3.5 px-6">Paciente</th>
-                  <th className="py-3.5 px-6">Tipo de Sesión</th>
-                  <th className="py-3.5 px-6">Estado</th>
-                  <th className="py-3.5 px-6 text-right">Acción</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-slate-700/60 text-sm">
-                {sortedPendingAppointments.map((item: any) => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition-colors duration-150"
-                  >
-                    {/* Hora */}
-                    <td className="py-4 px-6 font-semibold text-gray-900 dark:text-white whitespace-nowrap">
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg text-xs font-mono">
-                        <Clock className="w-3.5 h-3.5 text-gray-400 dark:text-slate-400" />
-                        {item.time || item.hour || "00:00"}
-                      </div>
-                    </td>
-
-                    {/* Paciente */}
-                    <td className="py-4 px-6 font-bold text-gray-900 dark:text-white">
-                      {getPatientDisplayName(item)}
-                    </td>
-
-                    {/* Tipo de Sesión */}
-                    <td className="py-4 px-6 text-gray-500 dark:text-slate-400 font-medium text-xs">
-                      {getSessionType(item)}
-                    </td>
-
-                    {/* Estado */}
-                    <td className="py-4 px-6 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-xs font-semibold rounded-full border border-amber-200/60 dark:border-amber-800/50">
-                        <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                        Programada
-                      </span>
-                    </td>
-
-                    {/* Botón Acción */}
-                    <td className="py-4 px-6 text-right whitespace-nowrap">
-                      <button
-                        onClick={() =>
-                          handleStatusChange(item.id, "Completada")
-                        }
-                        disabled={isUpdating}
-                        className="text-xs bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-xl transition-all disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5 shadow-sm active:scale-95"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Marcar Completada
-                      </button>
-                    </td>
+          <>
+            {/* VISTA TABLET Y DESKTOP */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50/70 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700/80 text-[11px] font-bold text-gray-400 dark:text-slate-400 uppercase tracking-wider">
+                    <th className="py-3.5 px-6">Hora</th>
+                    <th className="py-3.5 px-6">Paciente</th>
+                    <th className="py-3.5 px-6">Tipo de Sesión</th>
+                    <th className="py-3.5 px-6">Estado</th>
+                    <th className="py-3.5 px-6 text-right">Acción</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-slate-700/60 text-sm">
+                  {sortedPendingAppointments.map((item: any) => (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition-colors duration-150"
+                    >
+                      <td className="py-4 px-6 font-semibold text-gray-900 dark:text-white whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg text-xs font-mono">
+                          <Clock className="w-3.5 h-3.5 text-gray-400 dark:text-slate-400" />
+                          {item.time || item.hour || "00:00"}
+                        </div>
+                      </td>
+
+                      <td className="py-4 px-6 font-bold text-gray-900 dark:text-white">
+                        {getPatientDisplayName(item)}
+                      </td>
+
+                      <td className="py-4 px-6 text-gray-500 dark:text-slate-400 font-medium text-xs">
+                        {getSessionType(item)}
+                      </td>
+
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-xs font-semibold rounded-full border border-amber-200/60 dark:border-amber-800/50">
+                          <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                          Programada
+                        </span>
+                      </td>
+
+                      <td className="py-4 px-6 text-right whitespace-nowrap">
+                        <button
+                          onClick={() =>
+                            handleStatusChange(item.id, "Completada")
+                          }
+                          disabled={isUpdating}
+                          className="text-xs bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-xl transition-all disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5 shadow-sm"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Marcar Completada
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* VISTA MÓVIL */}
+            <div className="block md:hidden divide-y divide-gray-100 dark:divide-slate-700/60">
+              {sortedPendingAppointments.map((item: any) => (
+                <div
+                  key={item.id}
+                  className="p-4 space-y-3 hover:bg-gray-50/50 dark:hover:bg-slate-700/20 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg text-xs font-mono">
+                      <Clock className="w-3.5 h-3.5 text-gray-400 dark:text-slate-400" />
+                      {item.time || item.hour || "00:00"}
+                    </div>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-xs font-semibold rounded-full border border-amber-200/60 dark:border-amber-800/50">
+                      <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                      Programada
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-white text-base">
+                      {getPatientDisplayName(item)}
+                    </h3>
+                    <p className="text-xs text-gray-500 dark:text-slate-400 font-medium mt-0.5">
+                      {getSessionType(item)}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => handleStatusChange(item.id, "Completada")}
+                    disabled={isUpdating}
+                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white font-semibold text-xs rounded-xl transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    Marcar Completada
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

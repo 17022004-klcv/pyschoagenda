@@ -2,408 +2,443 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  CalendarDays,
-  CalendarCheck,
-  CalendarRange,
-  Clock,
-  CheckCircle2,
-  Plus,
+  Users,
+  UserCheck,
+  Heart,
+  CalendarCheck2,
+  TrendingUp,
+  PieChart as PieIcon,
+  BarChart3,
   Loader2,
 } from "lucide-react";
 import {
-  Appointment,
-  AppointmentService,
-} from "@/services/inicioRecep.service";
-import { PatientService } from "@/services/patient.service";
-import { Patient } from "@/types/patient";
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  BarChart,
+  Bar,
+} from "recharts";
+
 import { StatCard } from "@/components/ui/StatCard";
-import { showAlert } from "@/lib/sweetalert"; // 👈 Asegúrate de que esta sea la ruta correcta a tu helper
+import { PatientService } from "@/services/patient.service";
+import { AppointmentService } from "@/services/inicioRecep.service";
+import { getUsers } from "@/services/user.service";
+import { UserAccount } from "@/types/user";
 
-// 📅 Función para obtener fecha local YYYY-MM-DD
-const getLocalDateString = (dateObj: Date = new Date()): string => {
-  const year = dateObj.getFullYear();
-  const month = String(dateObj.getMonth() + 1).padStart(2, "0");
-  const day = String(dateObj.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
+const COLORS = [
+  "#3b82f6",
+  "#10b981",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#ec4899",
+  "#06b6d4",
+];
 
-// 🗓️ Rango de la semana (Domingo a Sábado)
-const getWeekRangeStrings = () => {
-  const now = new Date();
-  const dayOfWeek = now.getDay(); // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
+const MESES = [
+  "Ene",
+  "Feb",
+  "Mar",
+  "Abr",
+  "May",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dic",
+];
 
-  // El domingo de la semana actual es retroceder 'dayOfWeek' días
-  const sunday = new Date(now);
-  sunday.setDate(now.getDate() - dayOfWeek);
-
-  // El sábado de la semana actual es avanzar 6 días desde el domingo
-  const saturday = new Date(sunday);
-  saturday.setDate(sunday.getDate() + 6);
-
-  return {
-    startStr: getLocalDateString(sunday),
-    endStr: getLocalDateString(saturday),
-  };
-};
-
-export default function RecepcionistPage() {
-  const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
-  const [patientsMap, setPatientsMap] = useState<Map<string, Patient>>(
-    new Map(),
-  );
+export default function AdminDashboardPage() {
   const [loading, setLoading] = useState<boolean>(true);
-  const [isUpdating, setIsUpdating] = useState<boolean>(false);
 
-  // Fechas clave
-  const todayStr = getLocalDateString(new Date());
+  // Estados de KPIs
+  const [totalPsychologists, setTotalPsychologists] = useState<number>(0);
+  const [totalReceptionists, setTotalReceptionists] = useState<number>(0);
+  const [totalPatients, setTotalPatients] = useState<number>(0);
+  const [totalAppointmentsMonth, setTotalAppointmentsMonth] =
+    useState<number>(0);
 
-  const tomorrowObj = new Date();
-  tomorrowObj.setDate(tomorrowObj.getDate() + 1);
-  const tomorrowStr = getLocalDateString(tomorrowObj);
-
-  const { startStr: weekStartStr, endStr: weekEndStr } = getWeekRangeStrings();
+  // Estados de Gráficas Dinámicas
+  const [therapyDistribution, setTherapyDistribution] = useState<any[]>([]);
+  const [monthlyAppointmentsData, setMonthlyAppointmentsData] = useState<any[]>(
+    [],
+  );
+  const [patientStatusData, setPatientStatusData] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchAdminData = async () => {
       try {
         setLoading(true);
 
-        const [appointmentsData, patientsData] = await Promise.all([
-          typeof AppointmentService.getByDate === "function"
-            ? AppointmentService.getByDate(todayStr)
-            : AppointmentService.getToday(),
-          PatientService.getAll().catch(() => [] as Patient[]),
+        // Intentamos obtener todas las citas si el servicio lo soporta, o traemos el listado base
+        const fetchAppointments = async () => {
+          if (typeof (AppointmentService as any).getAll === "function") {
+            return await (AppointmentService as any).getAll();
+          } else if (typeof AppointmentService.getByDate === "function") {
+            return await AppointmentService.getByDate(
+              new Date().toISOString().split("T")[0],
+            );
+          } else if (typeof AppointmentService.getToday === "function") {
+            return await AppointmentService.getToday();
+          }
+          return [];
+        };
+
+        const [patients, appointments, users] = await Promise.all([
+          PatientService.getAll().catch(() => []),
+          fetchAppointments().catch(() => []),
+          getUsers().catch(() => [] as UserAccount[]),
         ]);
 
-        // Mapa de pacientes por ID
-        const pMap = new Map<string, Patient>();
-        if (Array.isArray(patientsData)) {
-          patientsData.forEach((p) => {
-            if (p.id) pMap.set(String(p.id), p);
-          });
+        // 1. KPI: Usuarios por Rol
+        if (Array.isArray(users)) {
+          const psychs = users.filter(
+            (u) => u.role === "psychologist" && u.status === "active",
+          );
+          const receps = users.filter(
+            (u) => u.role === "receptionist" && u.status === "active",
+          );
+          setTotalPsychologists(psychs.length);
+          setTotalReceptionists(receps.length);
         }
-        setPatientsMap(pMap);
 
-        setAllAppointments(appointmentsData || []);
+        // 2. KPI & Gráfica: Pacientes por Estado
+        if (Array.isArray(patients)) {
+          setTotalPatients(patients.length);
+
+          const statusCount = patients.reduce((acc: any, p: any) => {
+            const status =
+              p.status === "active"
+                ? "Activo"
+                : p.status === "inactive"
+                  ? "Inactivo"
+                  : p.status || "Activo";
+            acc[status] = (acc[status] || 0) + 1;
+            return acc;
+          }, {});
+
+          setPatientStatusData(
+            Object.keys(statusCount).map((key) => ({
+              estado: key,
+              cantidad: statusCount[key],
+            })),
+          );
+        }
+
+        // 3. Gráficas Dinámicas de Citas
+        if (Array.isArray(appointments)) {
+          setTotalAppointmentsMonth(appointments.length);
+
+          // A) Procesar Distribución por Especialidad / Terapia (Dona)
+          const therapyCount = appointments.reduce((acc: any, app: any) => {
+            const type =
+              app.therapyType ||
+              app.sessionType ||
+              app.type ||
+              "Consulta General";
+            acc[type] = (acc[type] || 0) + 1;
+            return acc;
+          }, {});
+
+          setTherapyDistribution(
+            Object.keys(therapyCount).map((key) => ({
+              name: key,
+              value: therapyCount[key],
+            })),
+          );
+
+          // B) Procesar Evolución Mensual Dinámica REAL de Citas
+          const monthlyMap: { [key: number]: number } = {
+            0: 0,
+            1: 0,
+            2: 0,
+            3: 0,
+            4: 0,
+            5: 0,
+            6: 0,
+            7: 0,
+            8: 0,
+            9: 0,
+            10: 0,
+            11: 0,
+          };
+
+          appointments.forEach((app: any) => {
+            if (app.date) {
+              const dateObj = new Date(app.date);
+              if (!isNaN(dateObj.getTime())) {
+                const monthIndex = dateObj.getMonth();
+                monthlyMap[monthIndex] = (monthlyMap[monthIndex] || 0) + 1;
+              }
+            }
+          });
+
+          // Mapeamos a los últimos 6 meses del año actual
+          const currentMonth = new Date().getMonth();
+          const last6Months = [];
+          for (let i = 5; i >= 0; i--) {
+            const mIndex = (currentMonth - i + 12) % 12;
+            last6Months.push({
+              mes: MESES[mIndex],
+              citas: monthlyMap[mIndex] || 0,
+            });
+          }
+
+          setMonthlyAppointmentsData(last6Months);
+        }
       } catch (err) {
-        console.error("Error al cargar datos del dashboard:", err);
+        console.error("Error al cargar métricas dinámicas:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, [todayStr]);
+    fetchAdminData();
+  }, []);
 
-  // 🔍 Extraer fecha de la cita
-  const extractDate = (app: any): string => {
-    if (!app.date) return todayStr;
-    return typeof app.date === "string" ? app.date.split("T")[0] : "";
-  };
-
-  // 👤 OBTENCIÓN DEL PACIENTE
-  const getPatientDisplayName = (item: any): string => {
-    if (!item) return "Sin datos";
-
-    if (Array.isArray(item.patientNames) && item.patientNames.length > 0) {
-      return item.patientNames.join(", ");
-    }
-
-    if (Array.isArray(item.patientIds) && item.patientIds.length > 0) {
-      const names = item.patientIds
-        .map((id: string) => patientsMap.get(String(id))?.name)
-        .filter(Boolean);
-      if (names.length > 0) return names.join(", ");
-    }
-
-    const singleId = item.patientId || item.patient_id;
-    if (singleId && patientsMap.has(String(singleId))) {
-      return patientsMap.get(String(singleId))!.name;
-    }
-
-    if (item.patient) {
-      if (typeof item.patient === "string" && item.patient.length < 24)
-        return item.patient;
-      if (typeof item.patient === "object" && item.patient.name)
-        return item.patient.name;
-    }
-
-    if (item.patientName) return item.patientName;
-
-    return "Paciente sin nombre";
-  };
-
-  // 🎯 OBTENCIÓN DEL TIPO DE SESIÓN
-  const getSessionType = (item: any): string => {
-    if (!item) return "Consulta General";
-    return (
-      item.therapyType ||
-      item.sessionType ||
-      item.type ||
-      item.reason ||
-      "Consulta General"
-    );
-  };
-
-  // Filtrados por fecha
-  const todayAppointments = allAppointments.filter(
-    (app) => extractDate(app) === todayStr,
-  );
-
-  const tomorrowAppointments = allAppointments.filter(
-    (app) => extractDate(app) === tomorrowStr,
-  );
-
-  const weekAppointments = allAppointments.filter((app) => {
-    const d = extractDate(app);
-    return d >= weekStartStr && d <= weekEndStr;
-  });
-
-  // 🛑 Citas PROGRAMADAS de hoy
-  const pendingAppointmentsToday = todayAppointments.filter(
-    (app: any) =>
-      app.status === "Programada" ||
-      app.status === "PROGRAMADA" ||
-      app.status === "programada",
-  );
-
-  // ⏰ Ordenar de AM a PM
-  const sortedPendingAppointments = [...pendingAppointmentsToday].sort(
-    (a: any, b: any) => {
-      const timeA = a.time || a.hour || "00:00";
-      const timeB = b.time || b.hour || "00:00";
-      return timeA.localeCompare(timeB);
-    },
-  );
-
-  // 🟢 Cambiar estado de la cita con actualización de tabla y alerta
-  const handleStatusChange = async (id: string, newStatus: string) => {
-    try {
-      setIsUpdating(true);
-      await AppointmentService.updateStatus(id, newStatus as any);
-
-      // 1. Actualizar estado local asegurando el tipo explícito de status
-      setAllAppointments((prev) =>
-        prev.map((app) =>
-          app.id === id
-            ? { ...app, status: newStatus as Appointment["status"] }
-            : app,
-        ),
-      );
-
-      // 2. Mostrar Alerta con tu helper
-      if (typeof showAlert?.successToast === "function") {
-        showAlert.successToast("Cita marcada como completada");
-      }
-    } catch (error) {
-      console.error("Error al actualizar la cita:", error);
-      if (typeof showAlert?.errorToast === "function") {
-        showAlert.errorToast("Error al actualizar la cita");
-      } else {
-        alert("Error al actualizar el estado de la cita.");
-      }
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  // 🟢 Componente Skeleton para las KPI Cards
-  const StatCardSkeleton = () => (
-    <div className="p-5 rounded-3xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 shadow-sm animate-pulse space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-24"></div>
-        <div className="h-6 w-16 bg-gray-200 dark:bg-slate-700 rounded-full"></div>
-      </div>
-      <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded w-16 mt-2"></div>
-    </div>
-  );
-
-  // 🟢 Componente Skeleton para la Tabla
-  const TableSkeleton = () => (
-    <div className="p-6 space-y-4 animate-pulse">
-      {[1, 2, 3].map((i) => (
-        <div
-          key={i}
-          className="h-12 bg-gray-100 dark:bg-slate-700/50 rounded-2xl w-full"
-        ></div>
-      ))}
+  const ChartSkeleton = () => (
+    <div className="p-6 rounded-3xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 shadow-sm animate-pulse h-[260px] flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
     </div>
   );
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif] px-1 sm:px-0">
       {/* HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
-            Inicio
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-slate-400 font-medium mt-1">
-            Gestión de citas programadas y resumen de la agenda.
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+          Panel de Administración
+        </h1>
+        <p className="text-sm text-gray-500 dark:text-slate-400 font-medium mt-1">
+          Métricas dinámicas y métricas operativas de la clínica.
+        </p>
       </div>
 
-      {/* KPIS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
+      {/* KPIS PRINCIPALES */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
         {loading ? (
-          <>
-            <StatCardSkeleton />
-            <StatCardSkeleton />
-            <StatCardSkeleton />
-          </>
+          <p className="text-sm text-gray-400">Cargando indicadores...</p>
         ) : (
           <>
             <StatCard
-              title="Citas de Hoy"
-              value={todayAppointments.length}
-              badgeText="Hoy"
+              title="Psicólogas/os"
+              value={totalPsychologists}
+              badgeText="Activos"
               badgeColor="blue"
-              icon={<CalendarDays className="w-6 h-6" />}
+              icon={<Users className="w-6 h-6" />}
             />
             <StatCard
-              title="Citas de Mañana"
-              value={tomorrowAppointments.length}
-              badgeText="Siguiente día"
+              title="Recepcionistas"
+              value={totalReceptionists}
+              badgeText="Atención"
               badgeColor="purple"
-              icon={<CalendarCheck className="w-6 h-6" />}
+              icon={<UserCheck className="w-6 h-6" />}
             />
             <StatCard
-              title="Total de la Semana"
-              value={weekAppointments.length}
-              badgeText="Semana actual"
+              title="Total Pacientes"
+              value={totalPatients}
+              badgeText="Registrados"
               badgeColor="emerald"
-              icon={<CalendarRange className="w-6 h-6" />}
+              icon={<Heart className="w-6 h-6" />}
+            />
+            <StatCard
+              title="Total Citas"
+              value={totalAppointmentsMonth}
+              badgeText="Histórico"
+              badgeColor="amber"
+              icon={<CalendarCheck2 className="w-6 h-6" />}
             />
           </>
         )}
       </div>
 
-      {/* SECCIÓN DE CITAS PROGRAMADAS */}
-      <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-3xl shadow-sm overflow-hidden transition-colors duration-200">
-        <div className="p-5 md:p-6 border-b border-gray-100 dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight">
-              Citas Programadas de Hoy
+      {/* SECCIÓN DE GRÁFICAS */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* GRÁFICA 1: TENDENCIA REAL DE CITAS (2 Cols) */}
+        <div className="lg:col-span-2 bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-3xl p-5 md:p-6 shadow-sm">
+          <div className="mb-4">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-blue-500" />
+              Evolución de Sesiones Atendidas
             </h2>
-            <p className="text-xs text-gray-500 dark:text-slate-400 font-medium mt-0.5">
-              Solo se muestran los pacientes programados para el día de hoy
+            <p className="text-xs text-gray-400 dark:text-slate-500 font-medium mt-0.5">
+              Volumen de citas por mes (Últimos 6 meses)
             </p>
           </div>
-          {isUpdating && (
-            <span className="self-start sm:self-auto flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-semibold bg-blue-50 dark:bg-blue-950/50 border border-blue-200/50 dark:border-blue-800/50 px-3 py-1.5 rounded-xl">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Guardando
-              cambios...
-            </span>
+
+          {loading ? (
+            <ChartSkeleton />
+          ) : (
+            <div className="h-[280px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={monthlyAppointmentsData}>
+                  <defs>
+                    <linearGradient id="colorCitas" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                  <XAxis
+                    dataKey="mes"
+                    stroke="#888888"
+                    fontSize={12}
+                    tickLine={false}
+                  />
+                  <YAxis stroke="#888888" fontSize={12} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "rgba(15, 23, 42, 0.9)",
+                      borderRadius: "12px",
+                      borderColor: "#334155",
+                      color: "#fff",
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="citas"
+                    stroke="#3b82f6"
+                    strokeWidth={3}
+                    fillOpacity={1}
+                    fill="url(#colorCitas)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           )}
         </div>
 
-        {/* CONTENIDO DE CITAS */}
-        {loading ? (
-          <TableSkeleton />
-        ) : sortedPendingAppointments.length === 0 ? (
-          <div className="py-12 text-center text-gray-500 dark:text-slate-400 font-medium text-sm px-4">
-            🎉 ¡Excelente! No hay citas programadas por atender el día de hoy.
+        {/* GRÁFICA 2: DONA AJUSTADA (Sin desbordamiento) */}
+        <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-3xl p-5 md:p-6 shadow-sm flex flex-col justify-between overflow-hidden">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
+              <PieIcon className="w-5 h-5 text-emerald-500" />
+              Especialidades
+            </h2>
+            <p className="text-xs text-gray-400 dark:text-slate-500 font-medium mt-0.5">
+              Demanda por categoría
+            </p>
           </div>
-        ) : (
-          <>
-            {/* VISTA TABLET Y DESKTOP */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-gray-50/70 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700/80 text-[11px] font-bold text-gray-400 dark:text-slate-400 uppercase tracking-wider">
-                    <th className="py-3.5 px-6">Hora</th>
-                    <th className="py-3.5 px-6">Paciente</th>
-                    <th className="py-3.5 px-6">Tipo de Sesión</th>
-                    <th className="py-3.5 px-6">Estado</th>
-                    <th className="py-3.5 px-6 text-right">Acción</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-slate-700/60 text-sm">
-                  {sortedPendingAppointments.map((item: any) => (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition-colors duration-150"
-                    >
-                      <td className="py-4 px-6 font-semibold text-gray-900 dark:text-white whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg text-xs font-mono">
-                          <Clock className="w-3.5 h-3.5 text-gray-400 dark:text-slate-400" />
-                          {item.time || item.hour || "00:00"}
-                        </div>
-                      </td>
 
-                      <td className="py-4 px-6 font-bold text-gray-900 dark:text-white">
-                        {getPatientDisplayName(item)}
-                      </td>
-
-                      <td className="py-4 px-6 text-gray-500 dark:text-slate-400 font-medium text-xs">
-                        {getSessionType(item)}
-                      </td>
-
-                      <td className="py-4 px-6 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-xs font-semibold rounded-full border border-amber-200/60 dark:border-amber-800/50">
-                          <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                          Programada
-                        </span>
-                      </td>
-
-                      <td className="py-4 px-6 text-right whitespace-nowrap">
-                        <button
-                          onClick={() =>
-                            handleStatusChange(item.id, "Completada")
-                          }
-                          disabled={isUpdating}
-                          className="text-xs bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-xl transition-all disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5 shadow-sm"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          Marcar Completada
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* VISTA MÓVIL */}
-            <div className="block md:hidden divide-y divide-gray-100 dark:divide-slate-700/60">
-              {sortedPendingAppointments.map((item: any) => (
-                <div
-                  key={item.id}
-                  className="p-4 space-y-3 hover:bg-gray-50/50 dark:hover:bg-slate-700/20 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg text-xs font-mono">
-                      <Clock className="w-3.5 h-3.5 text-gray-400 dark:text-slate-400" />
-                      {item.time || item.hour || "00:00"}
-                    </div>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-xs font-semibold rounded-full border border-amber-200/60 dark:border-amber-800/50">
-                      <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                      Programada
-                    </span>
-                  </div>
-
-                  <div>
-                    <h3 className="font-bold text-gray-900 dark:text-white text-base">
-                      {getPatientDisplayName(item)}
-                    </h3>
-                    <p className="text-xs text-gray-500 dark:text-slate-400 font-medium mt-0.5">
-                      {getSessionType(item)}
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => handleStatusChange(item.id, "Completada")}
-                    disabled={isUpdating}
-                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white font-semibold text-xs rounded-xl transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
+          {loading ? (
+            <ChartSkeleton />
+          ) : (
+            <div className="h-[200px] w-full my-auto">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={
+                      therapyDistribution.length > 0
+                        ? therapyDistribution
+                        : [{ name: "Sin Citas", value: 1 }]
+                    }
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={45}
+                    outerRadius={65}
+                    paddingAngle={4}
+                    dataKey="value"
                   >
-                    <CheckCircle2 className="w-4 h-4" />
-                    Marcar Completada
-                  </button>
-                </div>
-              ))}
+                    {therapyDistribution.map((_, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "rgba(15, 23, 42, 0.9)",
+                      borderRadius: "12px",
+                      borderColor: "#334155",
+                      color: "#fff",
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-          </>
+          )}
+
+          {/* Leyenda Personalizada dentro de un scroll contenedor para prevenir desbordamiento */}
+          <div className="max-h-[80px] overflow-y-auto space-y-1.5 pr-1 mt-2 border-t border-gray-100 dark:border-slate-700/50 pt-2">
+            {therapyDistribution.map((item, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between text-xs"
+              >
+                <div className="flex items-center gap-2 truncate">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                  />
+                  <span className="text-gray-600 dark:text-slate-300 truncate">
+                    {item.name}
+                  </span>
+                </div>
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {item.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ESTADO DE PACIENTES */}
+      <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-3xl p-5 md:p-6 shadow-sm">
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-purple-500" />
+            Condición de Pacientes
+          </h2>
+        </div>
+
+        {loading ? (
+          <ChartSkeleton />
+        ) : (
+          <div className="h-[200px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={
+                  patientStatusData.length > 0
+                    ? patientStatusData
+                    : [{ estado: "Activos", cantidad: totalPatients }]
+                }
+              >
+                <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                <XAxis
+                  dataKey="estado"
+                  stroke="#888888"
+                  fontSize={12}
+                  tickLine={false}
+                />
+                <YAxis stroke="#888888" fontSize={12} tickLine={false} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "rgba(15, 23, 42, 0.9)",
+                    borderRadius: "12px",
+                    borderColor: "#334155",
+                    color: "#fff",
+                  }}
+                />
+                <Bar
+                  dataKey="cantidad"
+                  fill="#8b5cf6"
+                  radius={[8, 8, 0, 0]}
+                  barSize={35}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         )}
       </div>
     </div>
