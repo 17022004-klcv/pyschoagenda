@@ -1,5 +1,5 @@
 import React from "react";
-import { Text, View, StyleSheet } from "@react-pdf/renderer";
+import { Document, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { SessionData } from "@/types/session";
 import { PdfLayout } from "./PdfLayout";
 
@@ -62,48 +62,51 @@ export const SessionDetailPdfDocument: React.FC<Props> = ({
   session,
   patientName,
 }) => (
-  <PdfLayout
-    title="Detalle de Sesión Clínica"
-    subtitle="REGISTRO DE EXPEDIENTE"
-  >
-    <View style={styles.grid}>
-      <View style={styles.fieldCol}>
-        <Text style={styles.label}>Paciente(s)</Text>
-        <Text style={styles.value}>{patientName}</Text>
+  <Document title={`Detalle_Sesion_${session.expedientCode || "Clinica"}`}>
+    <PdfLayout
+      title="Detalle de Sesión Clínica"
+      subtitle="REGISTRO DE EXPEDIENTE"
+      showStamp={true}
+    >
+      <View style={styles.grid}>
+        <View style={styles.fieldCol}>
+          <Text style={styles.label}>Paciente(s)</Text>
+          <Text style={styles.value}>{patientName || "No asignado"}</Text>
+        </View>
+        <View style={styles.fieldCol}>
+          <Text style={styles.label}>Tipo de Terapia</Text>
+          <Text style={styles.value}>{session.therapyType || "-"}</Text>
+        </View>
+        <View style={styles.fieldCol}>
+          <Text style={styles.label}>Fecha de la Sesión</Text>
+          <Text style={styles.value}>{session.date || "-"}</Text>
+        </View>
+        <View style={styles.fieldCol}>
+          <Text style={styles.label}>Código de Expediente</Text>
+          <Text style={styles.value}>{session.expedientCode || "N/A"}</Text>
+        </View>
       </View>
-      <View style={styles.fieldCol}>
-        <Text style={styles.label}>Tipo de Terapia</Text>
-        <Text style={styles.value}>{session.therapyType}</Text>
-      </View>
-      <View style={styles.fieldCol}>
-        <Text style={styles.label}>Fecha de la Sesión</Text>
-        <Text style={styles.value}>{session.date}</Text>
-      </View>
-      <View style={styles.fieldCol}>
-        <Text style={styles.label}>Código de Expediente</Text>
-        <Text style={styles.value}>{session.expedientCode || "N/A"}</Text>
-      </View>
-    </View>
 
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Tema Tratado</Text>
-      <View style={styles.box}>
-        <Text>{session.theme || "Sin tema registrado."}</Text>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Tema Tratado</Text>
+        <View style={styles.box}>
+          <Text>{session.theme || "Sin tema registrado."}</Text>
+        </View>
       </View>
-    </View>
 
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Resumen de la Sesión</Text>
-      <View style={styles.box}>
-        <Text>{session.summary || "Sin resumen registrado."}</Text>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Resumen de la Sesión</Text>
+        <View style={styles.box}>
+          <Text>{session.summary || "Sin resumen registrado."}</Text>
+        </View>
       </View>
-    </View>
 
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Análisis Clínico</Text>
-      <View style={styles.box}>
-        <Text>{session.analysis || "Sin análisis clínico registrado."}</Text>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Análisis Clínico</Text>
+        <View style={styles.box}>
+          <Text>{session.analysis || "Sin análisis clínico registrado."}</Text>
+        </View>
       </View>
-    </View>
-  </PdfLayout>
+    </PdfLayout>
+  </Document>
 );

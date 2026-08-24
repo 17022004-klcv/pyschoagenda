@@ -8,26 +8,11 @@ import { Select } from "@/components/ui/Select";
 import { showAlert } from "@/lib/sweetalert";
 import { sessionService } from "@/services/session.service";
 import { PatientService } from "@/services/patient.service";
-import { TherapyType } from "@/services/appointment.service";
 import { ExpedientService } from "@/services/expedient.service";
-import { Patient } from "@/types/patient"; // O la interfaz/tipo de tu paciente
+import { getCategories } from "@/services/category.service";
+import { Patient } from "@/types/patient";
 import { useAuth } from "@/lib/AuthContext";
 import { formatters } from "@/lib/validators";
-
-const THERAPY_OPTIONS: TherapyType[] = [
-  "Terapia Individual",
-  "Terapia de Pareja",
-  "Terapia Familiar",
-  "Terapia en Línea",
-  "Orientación Vocacional",
-  "Terapia de Grupo",
-];
-
-const MULTI_PATIENT_THERAPIES: TherapyType[] = [
-  "Terapia de Pareja",
-  "Terapia Familiar",
-  "Terapia de Grupo",
-];
 
 export default function SessionPage() {
   const currentDate = new Date().toLocaleDateString("es-ES", {
@@ -36,7 +21,7 @@ export default function SessionPage() {
     year: "numeric",
   });
 
-  const { currentUser } = useAuth();
+  const { currentUser, user } = useAuth();
 
   const [rawPatients, setRawPatients] = useState<Patient[]>([]);
   const [patientOptions, setPatientOptions] = useState<
@@ -47,10 +32,14 @@ export default function SessionPage() {
     { value: string; label: string }[]
   >([{ value: "", label: "Seleccionar tutor..." }]);
 
-  // 1. Cambiamos patient: "" por selectedPatients: [""]
+  // Opciones dinámicas para el Select de Tipo de Terapia
+  const [categoriesOptions, setCategoriesOptions] = useState<
+    { value: string; label: string }[]
+  >([{ value: "", label: "Cargando categorías..." }]);
+
   const [formData, setFormData] = useState({
     selectedPatients: [""] as string[],
-    therapyType: "Terapia Individual" as TherapyType,
+    therapyType: "",
     hasTutor: false,
     tutorName: "",
     theme: "",
@@ -58,23 +47,27 @@ export default function SessionPage() {
     analysis: "",
   });
 
-  const { user } = useAuth();
+  // Validación dinámica para saber si la terapia permite múltiples pacientes
+  const selectedTherapyLower = formData.therapyType.toLowerCase();
+  const isMultiPatientTherapy = ["pareja", "familiar", "grupo"].some(
+    (keyword) => selectedTherapyLower.includes(keyword),
+  );
 
   useEffect(() => {
     async function loadData() {
       try {
-        const patientsData = await PatientService.getAll();
+        const [patientsData, categoriesData] = await Promise.all([
+          PatientService.getAll(),
+          getCategories(),
+        ]);
 
-        // 1. Guardar pacientes en estado sin formatear
         setRawPatients(patientsData);
 
-        // 2. Formatear lista para el Select de Pacientes
         const formattedPatients = patientsData.map((p) => ({
           value: p.id,
           label: p.name,
         }));
 
-        // 3. Extraer y formatear lista de Tutores
         const tutorsList = patientsData
           .filter((p) => p.tutor && p.tutor.name)
           .map((p) => ({
@@ -82,7 +75,14 @@ export default function SessionPage() {
             label: `${p.tutor!.name} (${p.tutor!.relationship} de ${p.name})`,
           }));
 
-        // 4. Actualizar las opciones de los Selects
+        // Filtrar únicamente categorías activas registradas en Firebase
+        const activeCategories = categoriesData
+          .filter((c) => c.status === "active")
+          .map((c) => ({
+            value: c.name,
+            label: c.name,
+          }));
+
         setPatientOptions([
           { value: "", label: "Seleccionar paciente..." },
           ...formattedPatients,
@@ -92,6 +92,21 @@ export default function SessionPage() {
           { value: "", label: "Seleccionar tutor..." },
           ...tutorsList,
         ]);
+
+        const formattedCategories = [
+          { value: "", label: "Seleccionar tipo de terapia..." },
+          ...activeCategories,
+        ];
+
+        setCategoriesOptions(formattedCategories);
+
+        // Asignar el primer valor de categoría por defecto si está disponible
+        if (activeCategories.length > 0) {
+          setFormData((prev) => ({
+            ...prev,
+            therapyType: activeCategories[0].value,
+          }));
+        }
       } catch (error) {
         console.error("Error al cargar datos:", error);
       }
@@ -99,7 +114,17 @@ export default function SessionPage() {
 
     loadData();
   }, []);
-  // Handlers para agregar, actualizar y remover selectores de paciente
+
+  // Si cambia a una terapia individual, reajustar lista de pacientes a 1
+  useEffect(() => {
+    if (!isMultiPatientTherapy && formData.selectedPatients.length > 1) {
+      setFormData((prev) => ({
+        ...prev,
+        selectedPatients: [prev.selectedPatients[0]],
+      }));
+    }
+  }, [formData.therapyType, isMultiPatientTherapy]);
+
   const handlePatientChange = (index: number, value: string) => {
     const updated = [...formData.selectedPatients];
     updated[index] = value;
@@ -125,9 +150,13 @@ export default function SessionPage() {
       showAlert.errorToast("Debes estar autenticado para guardar una sesión.");
       return;
     }
-    // Validación: verificar que al menos el primer paciente esté seleccionado
+
     const validPatients = formData.selectedPatients.filter((p) => p !== "");
-    if (validPatients.length === 0 || !formData.theme) {
+    if (
+      validPatients.length === 0 ||
+      !formData.theme ||
+      !formData.therapyType
+    ) {
       showAlert?.errorToast
         ? showAlert.errorToast("Por favor completa los campos obligatorios")
         : alert("Por favor completa los campos obligatorios");
@@ -135,7 +164,6 @@ export default function SessionPage() {
     }
 
     try {
-      // 🟢 1. Obtener la información completa de los pacientes seleccionados
       const selectedPatientsData = rawPatients.filter((p) =>
         validPatients.includes(p.id),
       );
@@ -154,17 +182,16 @@ export default function SessionPage() {
         {
           patientIds,
           patientNames,
-          therapyType: formData.therapyType,
+          therapyType: formData.therapyType as any,
         },
-        fallbackUser, // 🟢 Pasamos el contexto del usuario con name y role
+        fallbackUser,
       );
 
-      // 🟢 3. Crear la sesión pasando el código real obtenido y el usuario autenticado
       await sessionService.createSession(
         {
-          patientId: validPatients[0], // O enviar el arreglo 'patientIds' si tu backend lo acepta
-          expedientCode: expedient.code, // 👈 Aquí se asigna el código dinámico
-          therapyType: formData.therapyType,
+          patientId: validPatients[0],
+          expedientCode: expedient.code,
+          therapyType: formData.therapyType as any,
           hasTutor: formData.hasTutor,
           tutorName: formData.hasTutor ? formData.tutorName : "",
           theme: formData.theme,
@@ -172,17 +199,16 @@ export default function SessionPage() {
           analysis: formData.analysis,
           date: currentDate,
         },
-        fallbackUser, // 👈 Se agrega el argumento 'user' obligatorio
+        fallbackUser,
       );
 
       showAlert?.successToast
         ? showAlert.successToast("Sesión guardada en el expediente con éxito")
         : alert("Sesión guardada con éxito");
 
-      // Limpieza de formulario
       setFormData({
         selectedPatients: [""],
-        therapyType: "Terapia Individual" as TherapyType,
+        therapyType: categoriesOptions[1]?.value || "",
         hasTutor: false,
         tutorName: "",
         theme: "",
@@ -197,30 +223,6 @@ export default function SessionPage() {
     }
   };
 
-  const SessionFormSkeleton = () => (
-    <div className="space-y-6 animate-pulse">
-      {/* Header Skeleton */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200 dark:border-slate-700/80">
-        <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded-lg w-1/3"></div>
-        <div className="h-8 bg-gray-100 dark:bg-slate-800 rounded-xl w-32"></div>
-      </div>
-
-      {/* Form Skeleton */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
-        <div className="h-10 bg-gray-100 dark:bg-slate-800 rounded-lg"></div>
-        <div className="h-10 bg-gray-100 dark:bg-slate-800 rounded-lg"></div>
-      </div>
-
-      <div className="h-20 bg-gray-100 dark:bg-slate-800 rounded-xl"></div>
-      <div className="h-10 bg-gray-100 dark:bg-slate-800 rounded-lg"></div>
-      <div className="h-24 bg-gray-100 dark:bg-slate-800 rounded-lg"></div>
-      <div className="h-24 bg-gray-100 dark:bg-slate-800 rounded-lg"></div>
-
-      <div className="flex justify-end">
-        <div className="h-11 bg-gray-200 dark:bg-slate-700 rounded-2xl w-40"></div>
-      </div>
-    </div>
-  );
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif] px-1 sm:px-0">
       <div>
@@ -236,7 +238,7 @@ export default function SessionPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6 pt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Lista Dinámica de Pacientes - Optimizada para iPads */}
+            {/* Lista Dinámica de Pacientes */}
             <div className="space-y-2">
               <label className="text-xs font-bold text-gray-700 dark:text-slate-300">
                 Paciente(s)
@@ -269,16 +271,20 @@ export default function SessionPage() {
                   </div>
                 ),
               )}
-              <button
-                type="button"
-                onClick={handleAddPatientSelect}
-                className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold cursor-pointer hover:underline flex items-center gap-1.5 pt-1 transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" /> Agregar otro paciente
-              </button>
+
+              {/* Muestra el botón de agregar paciente SOLO si la terapia es grupal, familiar o de pareja */}
+              {isMultiPatientTherapy && (
+                <button
+                  type="button"
+                  onClick={handleAddPatientSelect}
+                  className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold cursor-pointer hover:underline flex items-center gap-1.5 pt-1 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Agregar otro paciente
+                </button>
+              )}
             </div>
 
-            {/* Tipo de Terapia */}
+            {/* Tipo de Terapia (Categorías Dinámicas desde Firebase) */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-gray-700 dark:text-slate-300">
                 Tipo de Terapia
@@ -291,15 +297,12 @@ export default function SessionPage() {
                     therapyType: e.target.value,
                   })
                 }
-                options={THERAPY_OPTIONS.map((therapy: string) => ({
-                  value: therapy,
-                  label: therapy,
-                }))}
+                options={categoriesOptions}
               />
             </div>
           </div>
 
-          {/* Sección de Tutor Legal - Dark Mode */}
+          {/* Sección de Tutor Legal */}
           <div className="p-4 bg-gray-50/70 dark:bg-slate-800/80 border border-gray-200/80 dark:border-slate-700 rounded-xl space-y-3.5 transition-colors duration-200">
             <div className="flex items-center space-x-2.5">
               <input
@@ -381,7 +384,7 @@ export default function SessionPage() {
             />
           </div>
 
-          {/* Botón Guardar - Optimizada para iPads */}
+          {/* Botón Guardar */}
           <div className="flex justify-end">
             <button
               type="submit"

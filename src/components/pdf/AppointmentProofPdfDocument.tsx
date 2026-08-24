@@ -1,5 +1,5 @@
 import React from "react";
-import { Text, View, StyleSheet } from "@react-pdf/renderer";
+import { Document, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { SessionData } from "@/types/session";
 import { PdfLayout } from "./PdfLayout";
 
@@ -39,28 +39,30 @@ export const AppointmentProofPdfDocument: React.FC<Props> = ({
   const sessionTime = (session as SessionData & { time?: string }).time;
 
   return (
-    <PdfLayout
-      title="Constancia de Atención"
-      subtitle="DOCUMENTO DE ASISTENCIA"
-    >
-      <Text style={styles.docTitle}>A QUIEN CORRESPONDA</Text>
+    <Document title={`Constancia_Atencion_${session.expedientCode || "EXP"}`}>
+      <PdfLayout
+        title="Constancia de Atención"
+        subtitle="DOCUMENTO DE ASISTENCIA"
+      >
+        <Text style={styles.docTitle}>A QUIEN CORRESPONDA</Text>
 
-      <View style={styles.body}>
-        <Text>
-          Por medio de la presente se hace constar que el/la paciente{" "}
-          <Text style={styles.bold}>{patientName}</Text> asistió a su sesión de{" "}
-          <Text style={styles.bold}>{session.therapyType}</Text> el día{" "}
-          <Text style={styles.bold}>{session.date}</Text>
-          {sessionTime ? ` a las ${sessionTime}` : ""}, registrada bajo el
-          código de expediente{" "}
-          <Text style={styles.bold}>{session.expedientCode || "N/A"}</Text>.
-        </Text>
+        <View style={styles.body}>
+          <Text>
+            Por medio de la presente se hace constar que el/la paciente{" "}
+            <Text style={styles.bold}>{patientName}</Text> asistió a su sesión
+            de <Text style={styles.bold}>{session.therapyType}</Text> el día{" "}
+            <Text style={styles.bold}>{session.date}</Text>
+            {sessionTime ? ` a las ${sessionTime}` : ""}, registrada bajo el
+            código de expediente{" "}
+            <Text style={styles.bold}>{session.expedientCode || "N/A"}</Text>.
+          </Text>
 
-        <Text style={{ marginTop: 12 }}>
-          Se extiende la presente constancia a solicitud de la parte interesada
-          para los fines que considere convenientes.
-        </Text>
-      </View>
-    </PdfLayout>
+          <Text style={{ marginTop: 12 }}>
+            Se extiende la presente constancia a solicitud de la parte
+            interesada para los fines que considere convenientes.
+          </Text>
+        </View>
+      </PdfLayout>
+    </Document>
   );
 };

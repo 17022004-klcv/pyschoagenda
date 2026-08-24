@@ -1,7 +1,7 @@
 import React from "react";
-import { Text, View, StyleSheet } from "@react-pdf/renderer";
+import { Document, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { TherapyCategory } from "@/types/therapyCategory";
-import { PdfLayout } from "./PdfLayout"; // Ajusta la ruta a tu PdfLayout
+import { PdfLayout } from "./PdfLayout";
 
 const styles = StyleSheet.create({
   table: { marginTop: 10 },
@@ -59,36 +59,54 @@ export const CategoriesListPDF = ({
   categories: TherapyCategory[];
   filterTitle: string;
 }) => (
-  <PdfLayout
-    title={`Reporte de Categorías (${filterTitle})`}
-    subtitle="LISTADO GENERAL DE CATEGORÍAS REGISTRADAS"
-  >
-    <View style={styles.table}>
-      <View style={[styles.tableRow, styles.tableHeader]}>
-        <Text style={styles.colIndex}>#</Text>
-        <Text style={styles.colName}>Categoría de Terapia</Text>
-        <Text style={styles.colStatus}>Estado</Text>
-        <Text style={styles.colDate}>Fecha Alta</Text>
-      </View>
-
-      {categories.map((cat, index) => (
-        <View key={cat.id} style={styles.tableRow}>
-          <Text style={styles.colIndex}>{index + 1}</Text>
-          <Text style={styles.colName}>{cat.name}</Text>
-          <Text
-            style={[
-              styles.colStatus,
-              styles.statusBadge,
-              cat.status === "active" ? styles.activeText : styles.inactiveText,
-            ]}
-          >
-            {cat.status === "active" ? "Activo" : "Inactivo"}
-          </Text>
-          <Text style={styles.colDate}>{cat.createdAt}</Text>
+  <Document title={`Reporte_Categorias_${filterTitle.replace(/\s+/g, "_")}`}>
+    <PdfLayout
+      title={`Reporte de Categorías (${filterTitle})`}
+      subtitle="LISTADO GENERAL DE CATEGORÍAS REGISTRADAS"
+      showStamp={true}
+    >
+      <View style={styles.table}>
+        <View style={[styles.tableRow, styles.tableHeader]}>
+          <Text style={styles.colIndex}>#</Text>
+          <Text style={styles.colName}>Categoría de Terapia</Text>
+          <Text style={styles.colStatus}>Estado</Text>
+          <Text style={styles.colDate}>Fecha Alta</Text>
         </View>
-      ))}
-    </View>
-  </PdfLayout>
+
+        {categories.length === 0 ? (
+          <View style={styles.tableRow}>
+            <Text
+              style={[
+                styles.colName,
+                { color: "#94A3B8", width: "100%", textAlign: "center" },
+              ]}
+            >
+              No hay categorías registradas.
+            </Text>
+          </View>
+        ) : (
+          categories.map((cat, index) => (
+            <View key={cat.id || `cat-${index}`} style={styles.tableRow}>
+              <Text style={styles.colIndex}>{index + 1}</Text>
+              <Text style={styles.colName}>{cat.name}</Text>
+              <Text
+                style={[
+                  styles.colStatus,
+                  styles.statusBadge,
+                  cat.status === "active"
+                    ? styles.activeText
+                    : styles.inactiveText,
+                ]}
+              >
+                {cat.status === "active" ? "Activo" : "Inactivo"}
+              </Text>
+              <Text style={styles.colDate}>{cat.createdAt || "-"}</Text>
+            </View>
+          ))
+        )}
+      </View>
+    </PdfLayout>
+  </Document>
 );
 
 // 📄 PDF Ficha Individual
@@ -97,39 +115,42 @@ export const SingleCategoryPDF = ({
 }: {
   category: TherapyCategory;
 }) => (
-  <PdfLayout
-    title="Ficha de Categoría de Terapia"
-    subtitle="DETALLE TÉCNICO DE ESPECIALIDAD"
-  >
-    <View style={styles.detailBox}>
-      <View style={styles.fieldRow}>
-        <Text style={styles.label}>ID de Registro:</Text>
-        <Text style={styles.value}>{category.id}</Text>
-      </View>
-      <View style={styles.fieldRow}>
-        <Text style={styles.label}>Nombre de Categoría:</Text>
-        <Text style={styles.value}>{category.name}</Text>
-      </View>
-      <View style={styles.fieldRow}>
-        <Text style={styles.label}>Estado del Registro:</Text>
-        <Text
-          style={[
-            styles.value,
-            category.status === "active"
-              ? styles.activeText
-              : styles.inactiveText,
-            { fontWeight: "bold" },
-          ]}
+  <Document title={`Ficha_Categoria_${category.name.replace(/\s+/g, "_")}`}>
+    <PdfLayout
+      title="Ficha de Categoría de Terapia"
+      subtitle="DETALLE TÉCNICO DE ESPECIALIDAD"
+      showStamp={true}
+    >
+      <View style={styles.detailBox}>
+        <View style={styles.fieldRow}>
+          <Text style={styles.label}>ID de Registro:</Text>
+          <Text style={styles.value}>{category.id || "N/A"}</Text>
+        </View>
+        <View style={styles.fieldRow}>
+          <Text style={styles.label}>Nombre de Categoría:</Text>
+          <Text style={styles.value}>{category.name}</Text>
+        </View>
+        <View style={styles.fieldRow}>
+          <Text style={styles.label}>Estado del Registro:</Text>
+          <Text
+            style={[
+              styles.value,
+              category.status === "active"
+                ? styles.activeText
+                : styles.inactiveText,
+              { fontWeight: "bold" },
+            ]}
+          >
+            {category.status === "active" ? "ACTIVO" : "INACTIVO"}
+          </Text>
+        </View>
+        <View
+          style={[styles.fieldRow, { borderBottomWidth: 0, marginBottom: 0 }]}
         >
-          {category.status === "active" ? "ACTIVO" : "INACTIVO"}
-        </Text>
+          <Text style={styles.label}>Fecha de Alta:</Text>
+          <Text style={styles.value}>{category.createdAt || "-"}</Text>
+        </View>
       </View>
-      <View
-        style={[styles.fieldRow, { borderBottomWidth: 0, marginBottom: 0 }]}
-      >
-        <Text style={styles.label}>Fecha de Alta:</Text>
-        <Text style={styles.value}>{category.createdAt}</Text>
-      </View>
-    </View>
-  </PdfLayout>
+    </PdfLayout>
+  </Document>
 );

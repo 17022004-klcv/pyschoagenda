@@ -1,7 +1,7 @@
 import React from "react";
-import { Text, View, StyleSheet, Image } from "@react-pdf/renderer";
+import { Document, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
 import { UserAccount } from "@/types/user";
-import { PdfLayout } from "./PdfLayout"; // Asegúrate de ajustar la ruta según tu proyecto
+import { PdfLayout } from "./PdfLayout";
 
 // Estilos específicos para la sección de usuarios
 const styles = StyleSheet.create({
@@ -163,103 +163,121 @@ const formatRole = (role: string) => {
 // 📄 1. PDF PARA LISTADO DE USUARIOS
 interface UsersListPDFProps {
   users: UserAccount[];
-  filterTitle: string; // p. ej. "Todos los Usuarios", "Usuarios Activos" o "Usuarios Inactivos"
-  showKPIs?: boolean; // Controla si se muestran las tarjetas KPI
+  filterTitle: string;
+  showKPIs?: boolean;
 }
 
 export const UsersListPDF: React.FC<UsersListPDFProps> = ({
   users,
   filterTitle,
-  showKPIs = false, // Por defecto solo se activará cuando sea "Todos"
+  showKPIs = false,
 }) => {
   const totalUsers = users.length;
   const activeUsers = users.filter((u) => u.status === "active").length;
   const inactiveUsers = users.filter((u) => u.status === "inactive").length;
 
   return (
-    <PdfLayout
-      title={filterTitle}
-      subtitle="Reporte de Control de Usuarios y Accesos"
-    >
-      {/* Las KPIs solo se renderizan cuando showKPIs es true (Reporte de Todos) */}
-      {showKPIs && (
-        <View style={styles.summaryContainer}>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Total Registros</Text>
-            <Text style={styles.summaryValue}>{totalUsers}</Text>
+    <Document title={`Reporte_Usuarios_${filterTitle.replace(/\s+/g, "_")}`}>
+      <PdfLayout
+        title={filterTitle}
+        subtitle="Reporte de Control de Usuarios y Accesos"
+        showStamp={true}
+      >
+        {/* Las KPIs solo se renderizan cuando showKPIs es true */}
+        {showKPIs && (
+          <View style={styles.summaryContainer}>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryLabel}>Total Registros</Text>
+              <Text style={styles.summaryValue}>{totalUsers}</Text>
+            </View>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryLabel}>Activos</Text>
+              <Text style={{ ...styles.summaryValue, color: "#059669" }}>
+                {activeUsers}
+              </Text>
+            </View>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryLabel}>Inactivos</Text>
+              <Text style={{ ...styles.summaryValue, color: "#DC2626" }}>
+                {inactiveUsers}
+              </Text>
+            </View>
           </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Activos</Text>
-            <Text style={{ ...styles.summaryValue, color: "#059669" }}>
-              {activeUsers}
-            </Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Inactivos</Text>
-            <Text style={{ ...styles.summaryValue, color: "#DC2626" }}>
-              {inactiveUsers}
-            </Text>
-          </View>
-        </View>
-      )}
+        )}
 
-      {/* Tabla de Usuarios */}
-      <View style={styles.table}>
-        <View style={styles.tableHeader}>
-          <View style={styles.colName}>
-            <Text style={styles.headerText}>Usuario</Text>
-          </View>
-          <View style={styles.colEmail}>
-            <Text style={styles.headerText}>Contacto</Text>
-          </View>
-          <View style={styles.colRole}>
-            <Text style={styles.headerText}>Rol</Text>
-          </View>
-          <View style={styles.colStatus}>
-            <Text style={{ ...styles.headerText, textAlign: "right" }}>
-              Estado
-            </Text>
-          </View>
-        </View>
-
-        {users.map((user) => (
-          <View key={user.uid} style={styles.tableRow} wrap={false}>
+        {/* Tabla de Usuarios */}
+        <View style={styles.table}>
+          <View style={styles.tableHeader}>
             <View style={styles.colName}>
-              <Text style={{ ...styles.cellText, fontWeight: "bold" }}>
-                {user.name}
-              </Text>
-              <Text style={styles.cellSubtext}>
-                Alta: {user.createdAt || "N/A"}
-              </Text>
+              <Text style={styles.headerText}>Usuario</Text>
             </View>
-
             <View style={styles.colEmail}>
-              <Text style={styles.cellText}>{user.email}</Text>
-              <Text style={styles.cellSubtext}>
-                Tel: {user.phone || "Sin registro"}
+              <Text style={styles.headerText}>Contacto</Text>
+            </View>
+            <View style={styles.colRole}>
+              <Text style={styles.headerText}>Rol</Text>
+            </View>
+            <View style={styles.colStatus}>
+              <Text style={{ ...styles.headerText, textAlign: "right" }}>
+                Estado
               </Text>
             </View>
+          </View>
 
-            <View style={styles.colRole}>
-              <Text style={styles.cellText}>{formatRole(user.role)}</Text>
-            </View>
-
-            <View style={styles.colStatus}>
+          {users.length === 0 ? (
+            <View style={styles.tableRow}>
               <Text
                 style={{
-                  ...styles.badge,
-                  ...(user.status === "active"
-                    ? styles.badgeActive
-                    : styles.badgeInactive),
+                  ...styles.cellText,
+                  color: "#94A3B8",
+                  textAlign: "center",
+                  width: "100%",
                 }}
               >
-                {user.status === "active" ? "ACTIVO" : "INACTIVO"}
+                No hay usuarios para mostrar.
               </Text>
             </View>
-          </View>
-        ))}
-      </View>
-    </PdfLayout>
+          ) : (
+            users.map((user) => (
+              <View key={user.uid} style={styles.tableRow} wrap={false}>
+                <View style={styles.colName}>
+                  <Text style={{ ...styles.cellText, fontWeight: "bold" }}>
+                    {user.name}
+                  </Text>
+                  <Text style={styles.cellSubtext}>
+                    Alta: {user.createdAt || "N/A"}
+                  </Text>
+                </View>
+
+                <View style={styles.colEmail}>
+                  <Text style={styles.cellText}>{user.email}</Text>
+                  <Text style={styles.cellSubtext}>
+                    Tel: {user.phone || "Sin registro"}
+                  </Text>
+                </View>
+
+                <View style={styles.colRole}>
+                  <Text style={styles.cellText}>{formatRole(user.role)}</Text>
+                </View>
+
+                <View style={styles.colStatus}>
+                  <Text
+                    style={{
+                      ...styles.badge,
+                      ...(user.status === "active"
+                        ? styles.badgeActive
+                        : styles.badgeInactive),
+                    }}
+                  >
+                    {user.status === "active" ? "ACTIVO" : "INACTIVO"}
+                  </Text>
+                </View>
+              </View>
+            ))
+          )}
+        </View>
+      </PdfLayout>
+    </Document>
   );
 };
 
@@ -270,53 +288,58 @@ interface SingleUserPDFProps {
 
 export const SingleUserPDF: React.FC<SingleUserPDFProps> = ({ user }) => {
   return (
-    <PdfLayout
-      title="Ficha de Usuario"
-      subtitle={`Expediente de Personal - ID: ${user.uid.slice(0, 8)}`}
-    >
-      {/* Perfil del usuario */}
-      <View style={styles.profileCard}>
-        {user.photoURL && <Image src={user.photoURL} style={styles.avatar} />}
-        <View style={styles.profileInfo}>
-          <Text style={styles.userName}>{user.name}</Text>
-          <Text style={styles.userEmail}>{user.email}</Text>
-          <View style={{ flexDirection: "row", marginTop: 6 }}>
-            <Text
-              style={{
-                ...styles.badge,
-                ...(user.status === "active"
-                  ? styles.badgeActive
-                  : styles.badgeInactive),
-              }}
-            >
-              Cuenta {user.status === "active" ? "Activa" : "Inactiva"}
-            </Text>
+    <Document title={`Ficha_Usuario_${user.name.replace(/\s+/g, "_")}`}>
+      <PdfLayout
+        title="Ficha de Usuario"
+        subtitle={`Expediente de Personal - ID: ${user.uid.slice(0, 8)}`}
+        showStamp={true}
+      >
+        {/* Perfil del usuario */}
+        <View style={styles.profileCard}>
+          {user.photoURL && <Image src={user.photoURL} style={styles.avatar} />}
+          <View style={styles.profileInfo}>
+            <Text style={styles.userName}>{user.name}</Text>
+            <Text style={styles.userEmail}>{user.email}</Text>
+            <View style={{ flexDirection: "row", marginTop: 6 }}>
+              <Text
+                style={{
+                  ...styles.badge,
+                  ...(user.status === "active"
+                    ? styles.badgeActive
+                    : styles.badgeInactive),
+                }}
+              >
+                Cuenta {user.status === "active" ? "Activa" : "Inactiva"}
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
 
-      {/* Grilla de Datos */}
-      <View style={styles.gridDetails}>
-        <View style={styles.gridItem}>
-          <Text style={styles.gridLabel}>Rol en la Clínica</Text>
-          <Text style={styles.gridValue}>{formatRole(user.role)}</Text>
-        </View>
+        {/* Grilla de Datos */}
+        <View style={styles.gridDetails}>
+          <View style={styles.gridItem}>
+            <Text style={styles.gridLabel}>Rol en la Clínica</Text>
+            <Text style={styles.gridValue}>{formatRole(user.role)}</Text>
+          </View>
 
-        <View style={styles.gridItem}>
-          <Text style={styles.gridLabel}>Teléfono de Contacto</Text>
-          <Text style={styles.gridValue}>{user.phone || "No registrado"}</Text>
-        </View>
+          <View style={styles.gridItem}>
+            <Text style={styles.gridLabel}>Teléfono de Contacto</Text>
+            <Text style={styles.gridValue}>
+              {user.phone || "No registrado"}
+            </Text>
+          </View>
 
-        <View style={styles.gridItem}>
-          <Text style={styles.gridLabel}>Fecha de Alta</Text>
-          <Text style={styles.gridValue}>{user.createdAt || "N/A"}</Text>
-        </View>
+          <View style={styles.gridItem}>
+            <Text style={styles.gridLabel}>Fecha de Alta</Text>
+            <Text style={styles.gridValue}>{user.createdAt || "N/A"}</Text>
+          </View>
 
-        <View style={styles.gridItem}>
-          <Text style={styles.gridLabel}>Identificador Único</Text>
-          <Text style={{ ...styles.gridValue, fontSize: 9 }}>{user.uid}</Text>
+          <View style={styles.gridItem}>
+            <Text style={styles.gridLabel}>Identificador Único</Text>
+            <Text style={{ ...styles.gridValue, fontSize: 9 }}>{user.uid}</Text>
+          </View>
         </View>
-      </View>
-    </PdfLayout>
+      </PdfLayout>
+    </Document>
   );
 };

@@ -1,5 +1,5 @@
 import React from "react";
-import { Text, View, StyleSheet } from "@react-pdf/renderer";
+import { Document, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { SessionData } from "@/types/session";
 import { PdfLayout } from "./PdfLayout";
 
@@ -52,7 +52,6 @@ const styles = StyleSheet.create({
     fontSize: 8.5,
   },
 });
-
 interface SessionExtended extends SessionData {
   patientName: string;
 }
@@ -66,66 +65,68 @@ export const FullExpedientPdfDocument: React.FC<Props> = ({
   sessions,
   expedientTitle = "EXPEDIENTE CLÍNICO COMPLETO",
 }) => {
-  if (!sessions || sessions.length === 0) {
-    return (
-      <PdfLayout title={expedientTitle} subtitle="HISTORIAL DE SESIONES">
-        <View style={styles.box}>
-          <Text>No se encontraron registros de sesiones clínicas.</Text>
-        </View>
-      </PdfLayout>
-    );
-  }
-
   return (
-    <>
-      {/* 🟢 CADA SESIÓN OCURRE EN UNA PÁGINA INDEPENDIENTE */}
-      {sessions.map((session, index) => (
-        <PdfLayout
-          key={session.id || index}
-          title={`Sesión #${index + 1} - ${session.date}`}
-          subtitle={`EXPEDIENTE: ${session.expedientCode || "N/A"}`}
-        >
-          <View style={styles.grid}>
-            <View style={styles.fieldCol}>
-              <Text style={styles.label}>Paciente(s)</Text>
-              <Text style={styles.value}>{session.patientName}</Text>
-            </View>
-            <View style={styles.fieldCol}>
-              <Text style={styles.label}>Tipo de Terapia</Text>
-              <Text style={styles.value}>{session.therapyType}</Text>
-            </View>
-            <View style={styles.fieldCol}>
-              <Text style={styles.label}>Fecha de la Sesión</Text>
-              <Text style={styles.value}>{session.date}</Text>
-            </View>
-            <View style={styles.fieldCol}>
-              <Text style={styles.label}>Código de Expediente</Text>
-              <Text style={styles.value}>{session.expedientCode || "N/A"}</Text>
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Tema Tratado</Text>
-            <View style={styles.box}>
-              <Text>{session.theme || "Sin tema registrado."}</Text>
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Resumen de la Sesión</Text>
-            <View style={styles.box}>
-              <Text>{session.summary || "Sin resumen registrado."}</Text>
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Análisis Clínico</Text>
-            <View style={styles.box}>
-              <Text>{session.analysis || "Sin análisis clínico registrado."}</Text>
-            </View>
+    <Document title={expedientTitle}>
+      {!sessions || sessions.length === 0 ? (
+        <PdfLayout title={expedientTitle} subtitle="HISTORIAL DE SESIONES">
+          <View style={styles.box}>
+            <Text>No se encontraron registros de sesiones clínicas.</Text>
           </View>
         </PdfLayout>
-      ))}
-    </>
+      ) : (
+        sessions.map((session, index) => (
+          <PdfLayout
+            key={session.id || `session-${index}`}
+            title={`Sesión #${index + 1} - ${session.date || ""}`}
+            subtitle={`EXPEDIENTE: ${session.expedientCode || "N/A"}`}
+          >
+            {/* Contenido de la sesión */}
+            <View style={styles.grid}>
+              <View style={styles.fieldCol}>
+                <Text style={styles.label}>Paciente(s)</Text>
+                <Text style={styles.value}>{session.patientName}</Text>
+              </View>
+              <View style={styles.fieldCol}>
+                <Text style={styles.label}>Tipo de Terapia</Text>
+                <Text style={styles.value}>{session.therapyType}</Text>
+              </View>
+              <View style={styles.fieldCol}>
+                <Text style={styles.label}>Fecha de la Sesión</Text>
+                <Text style={styles.value}>{session.date}</Text>
+              </View>
+              <View style={styles.fieldCol}>
+                <Text style={styles.label}>Código de Expediente</Text>
+                <Text style={styles.value}>
+                  {session.expedientCode || "N/A"}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Tema Tratado</Text>
+              <View style={styles.box}>
+                <Text>{session.theme || "Sin tema registrado."}</Text>
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Resumen de la Sesión</Text>
+              <View style={styles.box}>
+                <Text>{session.summary || "Sin resumen registrado."}</Text>
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Análisis Clínico</Text>
+              <View style={styles.box}>
+                <Text>
+                  {session.analysis || "Sin análisis clínico registrado."}
+                </Text>
+              </View>
+            </View>
+          </PdfLayout>
+        ))
+      )}
+    </Document>
   );
 };

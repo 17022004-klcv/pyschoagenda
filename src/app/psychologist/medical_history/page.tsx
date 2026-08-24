@@ -18,6 +18,7 @@ import { Table, Column } from "@/components/ui/Table";
 import { ModalSheet } from "@/components/ui/Modal";
 import { sessionService } from "@/services/session.service";
 import { PatientService } from "@/services/patient.service";
+import { getCategories } from "@/services/category.service";
 import { Patient } from "@/types/patient";
 import { SessionData } from "@/types/session";
 import { PDFDownloadLink, pdf } from "@react-pdf/renderer";
@@ -28,22 +29,17 @@ import { useAuth } from "@/lib/AuthContext";
 import { showAlert } from "@/lib/sweetalert";
 import { formatters } from "@/lib/validators";
 
-const THERAPY_OPTIONS = [
-  { value: "TODAS", label: "Todas las terapias" },
-  { value: "Terapia Individual", label: "Terapia Individual" },
-  { value: "Terapia de Pareja", label: "Terapia de Pareja" },
-  { value: "Terapia Familiar", label: "Terapia Familiar" },
-  { value: "Terapia en Línea", label: "Terapia en Línea" },
-  { value: "Orientación Vocacional", label: "Orientación Vocacional" },
-  { value: "Terapia de Grupo", label: "Terapia de Grupo" },
-];
-
 export default function MedicalHistoryPage() {
   const { userData } = useAuth();
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
 
-  // Filtros de la tabla principal
+  // Categorías dinámicas desde Firebase
+  const [therapyOptions, setTherapyOptions] = useState<
+    { value: string; label: string }[]
+  >([{ value: "TODAS", label: "Todas las terapias" }]);
+
+  // Filtros
   const [selectedExpedient, setSelectedExpedient] = useState<string>("");
   const [selectedTherapy, setSelectedTherapy] = useState("TODAS");
   const [startDate, setStartDate] = useState<string>("");
@@ -51,25 +47,14 @@ export default function MedicalHistoryPage() {
 
   const [loading, setLoading] = useState(true);
 
-  // Estados para Modal de Descarga
+  // Estados Modal Descarga
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [downloadScope, setDownloadScope] = useState<"ALL" | "SPECIFIC">("ALL");
   const [selectedPatientExpedient, setSelectedPatientExpedient] =
     useState<string>("");
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
-  // Título / nombre derivado
-  const downloadTitle =
-    downloadScope === "SPECIFIC"
-      ? `EXPEDIENTE: ${selectedPatientExpedient}`
-      : "HISTORIAL CLÍNICO GENERAL";
-
-  const downloadFileName =
-    downloadScope === "SPECIFIC"
-      ? `Expediente_${selectedPatientExpedient.replace(/\s+/g, "_")}.pdf`
-      : "Historial_Clinico_Completo.pdf";
-
-  // Modales de Detalle/Edición
+  // Modales Ver / Editar
   const [selectedSession, setSelectedSession] = useState<SessionData | null>(
     null,
   );
@@ -84,7 +69,6 @@ export default function MedicalHistoryPage() {
     analysis: "",
   });
 
-  // Usuario para logs
   const currentUser = {
     uid: userData?.uid || "",
     name: userData?.name || "Usuario",
@@ -95,12 +79,25 @@ export default function MedicalHistoryPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [sessionsData, patientsData] = await Promise.all([
+        const [sessionsData, patientsData, categoriesData] = await Promise.all([
           sessionService.getAllSessions(),
           PatientService.getAll(),
+          getCategories(),
         ]);
         setSessions(sessionsData);
         setPatients(patientsData);
+
+        const activeCategories = categoriesData
+          .filter((c) => c.status === "active")
+          .map((c) => ({
+            value: c.name,
+            label: c.name,
+          }));
+
+        setTherapyOptions([
+          { value: "TODAS", label: "Todas las terapias" },
+          ...activeCategories,
+        ]);
       } catch (error) {
         console.error("Error al cargar los datos del historial:", error);
       } finally {
@@ -161,11 +158,6 @@ export default function MedicalHistoryPage() {
     if (typeof value === "string") {
       const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
       if (isoMatch) return isoMatch[0];
-      const dmyMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-      if (dmyMatch) {
-        const [, dd, mm, yyyy] = dmyMatch;
-        return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
-      }
       const parsed = new Date(value);
       if (!isNaN(parsed.getTime())) {
         return parsed.toISOString().slice(0, 10);
@@ -205,6 +197,7 @@ export default function MedicalHistoryPage() {
     endDate,
   ]);
 
+  // CORRECCIÓN: Filtrado flexible e inclusivo para la descarga del PDF
   const sessionsToDownload = useMemo(() => {
     if (downloadScope === "ALL") {
       return filteredSessions.map((s) => ({
@@ -212,12 +205,30 @@ export default function MedicalHistoryPage() {
         patientName: getPatientDisplayNames(s),
       }));
     }
+
+    if (!selectedPatientExpedient) return [];
+
+    const targetSearch = selectedPatientExpedient.toLowerCase().trim();
+
     return sessions
-      .filter(
-        (s) =>
-          s.expedientCode === selectedPatientExpedient ||
-          getPatientDisplayNames(s) === selectedPatientExpedient,
-      )
+      .filter((s) => {
+        const expCode = (s.expedientCode || "").toLowerCase().trim();
+        const pName = getPatientDisplayNames(s).toLowerCase().trim();
+
+        // Comprobar coincidencia en el código de expediente
+        const matchCode = expCode.length > 0 && expCode === targetSearch;
+
+        // Comprobar coincidencia en el nombre resuelto del paciente
+        const matchName = pName.length > 0 && pName.includes(targetSearch);
+
+        // Comprobar si coincide por IDs de paciente (String o Array)
+        const matchSingleId = s.patientId === selectedPatientExpedient;
+        const matchArrayIds =
+          Array.isArray(s.patientId) &&
+          s.patientId.includes(selectedPatientExpedient);
+
+        return matchCode || matchName || matchSingleId || matchArrayIds;
+      })
       .map((s) => ({
         ...s,
         patientName: getPatientDisplayNames(s),
@@ -230,6 +241,16 @@ export default function MedicalHistoryPage() {
     patients,
   ]);
 
+  const downloadTitle =
+    downloadScope === "SPECIFIC"
+      ? `EXPEDIENTE: ${selectedPatientExpedient}`
+      : "HISTORIAL CLÍNICO GENERAL";
+
+  const downloadFileName =
+    downloadScope === "SPECIFIC"
+      ? `Expediente_${selectedPatientExpedient.replace(/\s+/g, "_")}.pdf`
+      : "Historial_Clinico_Completo.pdf";
+
   const handleDownloadExpedient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (downloadScope === "SPECIFIC" && !selectedPatientExpedient) {
@@ -237,25 +258,35 @@ export default function MedicalHistoryPage() {
       return;
     }
     if (sessionsToDownload.length === 0) {
-      alert("No hay sesiones para descargar con los filtros seleccionados.");
+      alert("No hay sesiones para descargar con la opción seleccionada.");
       return;
     }
 
     try {
       setIsGeneratingPdf(true);
-      const blob = await pdf(
+
+      // 🟢 Instanciar el documento PDF de forma segura
+      const doc = (
         <FullExpedientPdfDocument
           sessions={sessionsToDownload}
           expedientTitle={downloadTitle}
-        />,
-      ).toBlob();
+        />
+      );
 
+      // Inicializar y actualizar el contenedor para evitar el error 'Cannot read properties of null (reading write)'
+      const pdfInstance = pdf();
+      pdfInstance.updateContainer(doc);
+      const blob = await pdfInstance.toBlob();
+
+      // Crear el enlace y disparar la descarga
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
       link.download = downloadFileName;
       document.body.appendChild(link);
       link.click();
+
+      // Limpieza
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       setIsDownloadModalOpen(false);
@@ -272,11 +303,22 @@ export default function MedicalHistoryPage() {
     setIsViewOpen(true);
   };
 
+  const handleOpenDownloadModal = () => {
+    if (selectedExpedient) {
+      setDownloadScope("SPECIFIC");
+      setSelectedPatientExpedient(selectedExpedient);
+    } else {
+      setDownloadScope("ALL");
+      setSelectedPatientExpedient("");
+    }
+    setIsDownloadModalOpen(true);
+  };
+
   const handleOpenEdit = (session: SessionData) => {
     setSelectedSession(session);
     setEditFormData({
       theme: session.theme || "",
-      therapyType: session.therapyType || "Terapia Individual",
+      therapyType: session.therapyType || "",
       summary: session.summary || "",
       analysis: session.analysis || "",
     });
@@ -302,8 +344,6 @@ export default function MedicalHistoryPage() {
       );
 
       setIsEditOpen(false);
-
-      // 🟢 Alerta simple en el flujo correcto
       showAlert.successToast("¡La sesión se ha actualizado correctamente!");
     } catch (error) {
       console.error("Error al actualizar la sesión:", error);
@@ -424,56 +464,6 @@ export default function MedicalHistoryPage() {
     },
   ];
 
-  // Skeleton para los Filtros Superiores
-  const HistoryFiltersSkeleton = () => (
-    <div className="flex flex-col md:flex-row items-end gap-3 bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200/80 dark:border-slate-700/80 shadow-sm animate-pulse">
-      <div className="w-full md:flex-1 space-y-1">
-        <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-28"></div>
-        <div className="h-10 bg-gray-100 dark:bg-slate-700/60 rounded-xl"></div>
-      </div>
-      <div className="w-full md:w-64 space-y-1">
-        <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-24"></div>
-        <div className="h-10 bg-gray-100 dark:bg-slate-700/60 rounded-xl"></div>
-      </div>
-      <div className="w-full md:w-40 space-y-1">
-        <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-16"></div>
-        <div className="h-10 bg-gray-100 dark:bg-slate-700/60 rounded-xl"></div>
-      </div>
-      <div className="w-full md:w-40 space-y-1">
-        <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-16"></div>
-        <div className="h-10 bg-gray-100 dark:bg-slate-700/60 rounded-xl"></div>
-      </div>
-      <div className="w-full md:w-auto">
-        <div className="h-10 bg-gray-200 dark:bg-slate-700 rounded-xl w-full md:w-44"></div>
-      </div>
-    </div>
-  );
-
-  // Skeleton para la Tabla
-  const TableSkeleton = () => (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200/80 dark:border-slate-700/80 overflow-hidden animate-pulse">
-      <div className="p-4 border-b border-gray-100 dark:border-slate-700/80 bg-gray-50/50 dark:bg-slate-800/50 flex gap-4">
-        <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/6"></div>
-        <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/4"></div>
-        <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/5"></div>
-        <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/5"></div>
-        <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-12 ml-auto"></div>
-      </div>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <div
-          key={i}
-          className="p-4 border-b border-gray-100 dark:border-slate-700/60 flex items-center gap-4"
-        >
-          <div className="h-4 bg-gray-100 dark:bg-slate-700/80 rounded w-1/6"></div>
-          <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/4"></div>
-          <div className="h-4 bg-gray-100 dark:bg-slate-700/80 rounded w-1/5"></div>
-          <div className="h-4 bg-gray-100 dark:bg-slate-700/80 rounded w-1/5"></div>
-          <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded-xl w-20 ml-auto"></div>
-        </div>
-      ))}
-    </div>
-  );
-
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif] px-1 sm:px-0">
       {/* Encabezado */}
@@ -484,81 +474,72 @@ export default function MedicalHistoryPage() {
         </h1>
       </div>
 
-      {/* Barra de Filtros y Botón de Descarga */}
-      {loading ? (
-        <HistoryFiltersSkeleton />
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-gray-200/80 dark:border-slate-700/80 shadow-sm transition-colors duration-200 items-end">
-          {/* Buscador Paciente / Expediente */}
-          <div className="lg:col-span-4">
-            <label className="block text-[11px] font-bold text-gray-600 dark:text-slate-400 mb-1">
-              Paciente / Expediente
-            </label>
-            <Select
-              value={selectedExpedient}
-              onChange={(e: any) => setSelectedExpedient(e.target.value)}
-              options={patientExpedientOptions}
-              placeholder="Buscar por código o nombre..."
-              searchable={true}
-            />
-          </div>
-
-          {/* Filtro Tipo de Terapia */}
-          <div className="lg:col-span-3">
-            <label className="block text-[11px] font-bold text-gray-600 dark:text-slate-400 mb-1">
-              Tipo de Terapia
-            </label>
-            <Select
-              value={selectedTherapy}
-              onChange={(e: any) => setSelectedTherapy(e.target.value)}
-              options={THERAPY_OPTIONS}
-            />
-          </div>
-
-          {/* Fecha Desde */}
-          <div className="lg:col-span-2">
-            <label className="block text-[11px] font-bold text-gray-600 dark:text-slate-400 mb-1">
-              Desde
-            </label>
-            <input
-              type="date"
-              value={startDate}
-              max={endDate || undefined}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-            />
-          </div>
-
-          {/* Fecha Hasta */}
-          <div className="lg:col-span-2">
-            <label className="block text-[11px] font-bold text-gray-600 dark:text-slate-400 mb-1">
-              Hasta
-            </label>
-            <input
-              type="date"
-              value={endDate}
-              min={startDate || undefined}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-            />
-          </div>
-
-          {/* Botón Descarga */}
-          <div className="sm:col-span-2 lg:col-span-1">
-            <Button
-              onClick={() => setIsDownloadModalOpen(true)}
-              variant="secondary"
-              className="flex items-center gap-2 text-xs font-semibold px-3 py-2 text-gray-700 dark:text-slate-200 bg-gray-50 dark:bg-slate-700/60 hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-300 dark:border-slate-600 w-full justify-center rounded-xl transition-all active:scale-95 cursor-pointer h-[38px]"
-            >
-              <Download className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-              <span className="hidden lg:inline">Descargar</span>
-              <span className="lg:hidden">Opciones Descarga</span>
-            </Button>
-          </div>
+      {/* Barra de Filtros */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-gray-200/80 dark:border-slate-700/80 shadow-sm transition-colors duration-200 items-end">
+        <div className="lg:col-span-4">
+          <label className="block text-[11px] font-bold text-gray-600 dark:text-slate-400 mb-1">
+            Paciente / Expediente
+          </label>
+          <Select
+            value={selectedExpedient}
+            onChange={(e: any) => setSelectedExpedient(e.target.value)}
+            options={patientExpedientOptions}
+            placeholder="Buscar por código o nombre..."
+            searchable={true}
+          />
         </div>
-      )}
 
-      {/* 🟢 MODAL DE DESCARGA DE EXPEDIENTES REDISEÑADO */}
+        <div className="lg:col-span-3">
+          <label className="block text-[11px] font-bold text-gray-600 dark:text-slate-400 mb-1">
+            Tipo de Terapia
+          </label>
+          <Select
+            value={selectedTherapy}
+            onChange={(e: any) => setSelectedTherapy(e.target.value)}
+            options={therapyOptions}
+          />
+        </div>
+
+        <div className="lg:col-span-2">
+          <label className="block text-[11px] font-bold text-gray-600 dark:text-slate-400 mb-1">
+            Desde
+          </label>
+          <input
+            type="date"
+            value={startDate}
+            max={endDate || undefined}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+          />
+        </div>
+
+        <div className="lg:col-span-2">
+          <label className="block text-[11px] font-bold text-gray-600 dark:text-slate-400 mb-1">
+            Hasta
+          </label>
+          <input
+            type="date"
+            value={endDate}
+            min={startDate || undefined}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+          />
+        </div>
+
+        <div className="sm:col-span-2 lg:col-span-1">
+          <Button
+            onClick={handleOpenDownloadModal}
+            variant="secondary"
+            className="flex items-center gap-2 text-xs font-semibold px-3 py-2 text-gray-700 dark:text-slate-200 bg-gray-50 dark:bg-slate-700/60 hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-300 dark:border-slate-600 w-full justify-center rounded-xl transition-all active:scale-95 cursor-pointer h-[38px]"
+          >
+            <Download className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+            <span className="hidden lg:inline">Descargar</span>
+            <span className="lg:hidden">Opciones Descarga</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Modal Descarga */}
       {isDownloadModalOpen && (
         <ModalSheet
           isOpen={isDownloadModalOpen}
@@ -575,16 +556,14 @@ export default function MedicalHistoryPage() {
                 Selecciona el alcance de la descarga
               </label>
 
-              {/* Selector Visual de Alcance */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {/* Opción 1: Todas las Sesiones */}
                 <button
                   type="button"
                   onClick={() => setDownloadScope("ALL")}
                   className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${
                     downloadScope === "ALL"
                       ? "border-blue-500 bg-blue-50/50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-200 ring-2 ring-blue-500/20"
-                      : "border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-600 text-gray-700 dark:text-slate-300"
+                      : "border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-300"
                   }`}
                 >
                   <div className="flex items-center justify-between w-full mb-1">
@@ -609,14 +588,13 @@ export default function MedicalHistoryPage() {
                   </p>
                 </button>
 
-                {/* Opción 2: Expediente Específico */}
                 <button
                   type="button"
                   onClick={() => setDownloadScope("SPECIFIC")}
                   className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${
                     downloadScope === "SPECIFIC"
                       ? "border-blue-500 bg-blue-50/50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-200 ring-2 ring-blue-500/20"
-                      : "border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-600 text-gray-700 dark:text-slate-300"
+                      : "border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-300"
                   }`}
                 >
                   <div className="flex items-center justify-between w-full mb-1">
@@ -636,15 +614,14 @@ export default function MedicalHistoryPage() {
                     </span>
                   </div>
                   <p className="text-[11px] text-gray-500 dark:text-slate-400">
-                    Genera la ficha completa y privada de un único paciente.
+                    Genera la ficha completa de un único paciente.
                   </p>
                 </button>
               </div>
             </div>
 
-            {/* Select condicional para expediente específico */}
             {downloadScope === "SPECIFIC" && (
-              <div className="pt-2 animate-fadeIn">
+              <div className="pt-2">
                 <label className="block text-gray-700 dark:text-slate-300 font-bold mb-1">
                   Seleccionar Expediente / Paciente
                 </label>
@@ -660,7 +637,6 @@ export default function MedicalHistoryPage() {
               </div>
             )}
 
-            {/* Indicador Informativo */}
             <div className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl border border-gray-200/60 dark:border-slate-700/60 flex items-center gap-2 text-[11px] text-gray-600 dark:text-slate-400">
               <FileText className="w-4 h-4 text-blue-500 shrink-0" />
               <span>
@@ -672,22 +648,18 @@ export default function MedicalHistoryPage() {
         </ModalSheet>
       )}
 
-      {/* Tabla con Skeleton */}
-      {loading ? (
-        <TableSkeleton />
-      ) : (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200/80 dark:border-slate-700/80 overflow-hidden shadow-sm transition-colors duration-200">
-          <Table
-            columns={columns}
-            data={filteredSessions}
-            keyExtractor={(item: any) => item.id || Math.random().toString()}
-            itemsPerPage={8}
-            emptyMessage="No se encontraron expedientes ni sesiones que coincidan con la búsqueda."
-          />
-        </div>
-      )}
+      {/* Tabla Principal */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200/80 dark:border-slate-700/80 overflow-hidden shadow-sm transition-colors duration-200">
+        <Table
+          columns={columns}
+          data={filteredSessions}
+          keyExtractor={(item: any) => item.id || Math.random().toString()}
+          itemsPerPage={8}
+          emptyMessage="No se encontraron expedientes ni sesiones que coincidan con la búsqueda."
+        />
+      </div>
 
-      {/* 🟢 MODAL VER DETALLE */}
+      {/* Modal Ver Detalle */}
       {selectedSession && (
         <ModalSheet
           isOpen={isViewOpen}
@@ -766,7 +738,7 @@ export default function MedicalHistoryPage() {
         </ModalSheet>
       )}
 
-      {/* 🟢 MODAL EDITAR SESIÓN */}
+      {/* Modal Editar Sesión */}
       {selectedSession && (
         <ModalSheet
           isOpen={isEditOpen}
@@ -809,7 +781,7 @@ export default function MedicalHistoryPage() {
                     therapyType: e.target.value,
                   })
                 }
-                options={THERAPY_OPTIONS.filter(
+                options={therapyOptions.filter(
                   (opt: any) => opt.value !== "TODAS",
                 )}
               />

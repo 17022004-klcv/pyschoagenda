@@ -1,12 +1,5 @@
 import React from "react";
-import {
-  Document,
-  Page,
-  Text,
-  View,
-  Image,
-  StyleSheet,
-} from "@react-pdf/renderer";
+import { Page, Text, View, Image, StyleSheet } from "@react-pdf/renderer";
 
 const styles = StyleSheet.create({
   page: {
@@ -139,11 +132,10 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
   },
 });
-
 interface PdfLayoutProps {
   title: string;
   subtitle?: string;
-  showStamp?: boolean; // Permite apagarlo en consentimientos
+  showStamp?: boolean;
   children: React.ReactNode;
 }
 
@@ -163,64 +155,61 @@ export const PdfLayout = ({
       ? `${window.location.origin}/sello.png`
       : "/sello.png";
 
+  // 🟢 RETORNAR DIRECTAMENTE LA PÁGINA (SIN <Document>)
   return (
-    <Document>
-      <Page size="LETTER" style={styles.page}>
-        <View style={styles.topBar} />
+    <Page size="LETTER" style={styles.page}>
+      <View style={styles.topBar} />
 
-        <View style={styles.header}>
-          <View style={styles.brandGroup}>
-            <Image src={logoUrl} style={styles.logo} />
-            <View>
-              <Text style={styles.clinicName}>CENTRO PSICOLÓGICO</Text>
-              <Text style={styles.subTitle}>{subtitle}</Text>
-            </View>
+      <View style={styles.header}>
+        <View style={styles.brandGroup}>
+          <Image src={logoUrl} style={styles.logo} />
+          <View>
+            <Text style={styles.clinicName}>CENTRO PSICOLÓGICO</Text>
+            <Text style={styles.subTitle}>{subtitle}</Text>
           </View>
+        </View>
 
-          <View style={styles.badgeDate}>
-            <Text style={styles.dateText}>
-              Emisión: {new Date().toLocaleDateString("es-SV")}
+        <View style={styles.badgeDate}>
+          <Text style={styles.dateText}>
+            Emisión: {new Date().toLocaleDateString("es-SV")}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.documentHeader}>
+        <Text style={styles.documentTitle}>{title}</Text>
+        <Text style={styles.documentSub}>Documento Oficial de Expediente</Text>
+      </View>
+
+      {/* Contenido Dinámico */}
+      <View style={styles.content}>{children}</View>
+
+      {/* SELLO INSTITUCIONAL A LA DERECHA */}
+      {showStamp && (
+        <View style={styles.footerSignatureRow}>
+          <View style={styles.stampBox}>
+            <Image src={stampUrl} style={styles.stampImage} />
+            <Text style={styles.signatoryTitle}>
+              Centro Psicológico Integral
+            </Text>
+            <Text style={styles.signatorySub}>
+              Sello e Identificación Institucional
             </Text>
           </View>
         </View>
+      )}
 
-        <View style={styles.documentHeader}>
-          <Text style={styles.documentTitle}>{title}</Text>
-          <Text style={styles.documentSub}>
-            Documento Oficial de Expediente
-          </Text>
-        </View>
-
-        {/* Contenido Dinámico */}
-        <View style={styles.content}>{children}</View>
-
-        {/* 🟢 SELLO INSTITUCIONAL A LA DERECHA */}
-        {showStamp && (
-          <View style={styles.footerSignatureRow}>
-            <View style={styles.stampBox}>
-              <Image src={stampUrl} style={styles.stampImage} />
-              <Text style={styles.signatoryTitle}>
-                Centro Psicológico Integral
-              </Text>
-              <Text style={styles.signatorySub}>
-                Sello e Identificación Institucional
-              </Text>
-            </View>
-          </View>
-        )}
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Este documento contiene información médica confidencial protegida.
-          </Text>
-          <Text
-            style={styles.footerText}
-            render={({ pageNumber, totalPages }) =>
-              `Página ${pageNumber} de ${totalPages}`
-            }
-          />
-        </View>
-      </Page>
-    </Document>
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>
+          Este documento contiene información médica confidencial protegida.
+        </Text>
+        <Text
+          style={styles.footerText}
+          render={({ pageNumber, totalPages }) =>
+            `Página ${pageNumber} de ${totalPages}`
+          }
+        />
+      </View>
+    </Page>
   );
 };
