@@ -382,7 +382,7 @@ export default function MedicalHistoryPage() {
     {
       header: "T. Terapia",
       accessor: (item) => (
-        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-900/60">
           {item.therapyType}
         </span>
       ),

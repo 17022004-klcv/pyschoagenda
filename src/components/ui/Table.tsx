@@ -46,12 +46,12 @@ export function Table<T>({
   };
 
   return (
-    <div className="bg-[#F8F9FA] border border-gray-200/80 rounded-3xl p-2 shadow-sm overflow-hidden font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display',sans-serif]">
+    <div className="bg-[#F8F9FA] dark:bg-slate-900/90 border border-gray-200/80 dark:border-slate-800 rounded-3xl p-2 shadow-sm dark:shadow-none overflow-hidden font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display',sans-serif] transition-colors">
       {/* Contenedor con scroll horizontal para móviles */}
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-gray-200/80 text-gray-400 text-xs font-bold uppercase tracking-wider">
+            <tr className="border-b border-gray-200/80 dark:border-slate-800 text-gray-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">
               {columns.map((col, index) => (
                 <th
                   key={index}
@@ -68,12 +68,12 @@ export function Table<T>({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200/60 text-sm">
+          <tbody className="divide-y divide-gray-200/60 dark:divide-slate-800/80 text-sm">
             {currentData.length === 0 ? (
               <tr>
                 <td
                   colSpan={columns.length}
-                  className="text-center py-10 text-gray-400 font-medium text-sm"
+                  className="text-center py-10 text-gray-400 dark:text-slate-500 font-medium text-sm"
                 >
                   {emptyMessage}
                 </td>
@@ -82,7 +82,7 @@ export function Table<T>({
               currentData.map((item) => (
                 <tr
                   key={keyExtractor(item)}
-                  className="bg-white hover:bg-gray-50/80 transition-colors"
+                  className="bg-white dark:bg-slate-900 hover:bg-gray-50/80 dark:hover:bg-slate-800/50 transition-colors text-gray-900 dark:text-slate-200"
                 >
                   {columns.map((col, index) => (
                     <td
@@ -107,33 +107,36 @@ export function Table<T>({
 
       {/* 📄 PAGINACIÓN SENCILLA Y MINIMALISTA */}
       {data.length > 0 && (
-        <div className="flex items-center justify-between px-5 py-3 border-t border-gray-200/60 bg-white/50 text-xs text-gray-500 font-medium rounded-b-2xl">
+        <div className="flex items-center justify-between px-5 py-3 border-t border-gray-200/60 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 text-xs text-gray-500 dark:text-slate-400 font-medium rounded-b-2xl">
           <span>
             Mostrando{" "}
-            <strong className="text-gray-800">
+            <strong className="text-gray-800 dark:text-slate-200">
               {startIndex + 1}-{Math.min(endIndex, data.length)}
             </strong>{" "}
-            de <strong className="text-gray-800">{data.length}</strong>
+            de{" "}
+            <strong className="text-gray-800 dark:text-slate-200">
+              {data.length}
+            </strong>
           </span>
 
           <div className="flex items-center gap-1">
             <button
               onClick={handlePrevPage}
               disabled={currentPage === 1}
-              className="p-1.5 rounded-xl border border-gray-200/80 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition-all"
+              className="p-1.5 rounded-xl border border-gray-200/80 dark:border-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:pointer-events-none transition-all"
               title="Página Anterior"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
 
-            <span className="px-3 py-1 font-semibold text-gray-700">
+            <span className="px-3 py-1 font-semibold text-gray-700 dark:text-slate-300">
               {currentPage} / {totalPages || 1}
             </span>
 
             <button
               onClick={handleNextPage}
               disabled={currentPage === totalPages || totalPages === 0}
-              className="p-1.5 rounded-xl border border-gray-200/80 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition-all"
+              className="p-1.5 rounded-xl border border-gray-200/80 dark:border-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:pointer-events-none transition-all"
               title="Página Siguiente"
             >
               <ChevronRight className="w-4 h-4" />

@@ -82,23 +82,31 @@ export const Select: React.FC<SelectProps> = ({
   return (
     <div className="space-y-1 w-full relative" ref={containerRef}>
       {label && (
-        <label className="block font-bold text-gray-800 text-sm">{label}</label>
+        <label className="block font-bold text-gray-800 dark:text-slate-200 text-sm">
+          {label}
+        </label>
       )}
 
       <div
         onClick={toggleOpen}
-        className={`w-full h-[42px] px-4 rounded-2xl text-sm border bg-gray-50 border-gray-200 text-gray-900 flex items-center justify-between transition-all duration-200 cursor-pointer ${
-          error ? "border-rose-300 bg-rose-50/50" : "hover:border-blue-400"
+        className={`w-full h-[42px] px-4 rounded-2xl text-sm border bg-gray-50 dark:bg-slate-900/80 border-gray-200 dark:border-slate-700/80 text-gray-900 dark:text-white flex items-center justify-between transition-all duration-200 cursor-pointer ${
+          error
+            ? "border-rose-300 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/30 text-rose-900 dark:text-rose-200"
+            : "hover:border-blue-400 dark:hover:border-blue-500"
         } ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${className}`}
       >
         <span
-          className={`truncate pr-2 ${selectedOption ? "font-semibold text-gray-900" : "text-gray-400"}`}
+          className={`truncate pr-2 ${
+            selectedOption
+              ? "font-semibold text-gray-900 dark:text-white"
+              : "text-gray-400 dark:text-slate-500"
+          }`}
         >
           {selectedOption ? selectedOption.label : placeholder}
         </span>
 
         <ChevronDown
-          className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-200 ${
+          className={`w-4 h-4 text-gray-400 dark:text-slate-500 flex-shrink-0 transition-transform duration-200 ${
             isOpen ? "rotate-180" : ""
           }`}
         />
@@ -106,20 +114,20 @@ export const Select: React.FC<SelectProps> = ({
 
       {isOpen && !disabled && (
         <div
-          className={`absolute z-[60] left-0 right-0 bg-white border border-gray-200 rounded-2xl shadow-xl p-2 space-y-1 ${
+          className={`absolute z-[60] left-0 right-0 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700/80 rounded-2xl shadow-xl dark:shadow-slate-950/50 p-2 space-y-1 ${
             dropUp ? "bottom-full mb-1" : "top-full mt-1"
           }`}
         >
           {searchable && (
             <div className="relative">
-              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-gray-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Buscar..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full pl-9 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-blue-500"
+                className="w-full pl-9 pr-3 py-1.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-xs font-medium text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400"
                 autoFocus
               />
             </div>
@@ -127,7 +135,7 @@ export const Select: React.FC<SelectProps> = ({
 
           <div className="max-h-48 overflow-y-auto space-y-0.5 mt-1 pr-1">
             {filteredOptions.length === 0 ? (
-              <div className="py-3 text-center text-xs text-gray-400 font-medium">
+              <div className="py-3 text-center text-xs text-gray-400 dark:text-slate-500 font-medium">
                 No hay resultados
               </div>
             ) : (
@@ -139,13 +147,13 @@ export const Select: React.FC<SelectProps> = ({
                     onClick={() => handleSelect(opt.value)}
                     className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-colors ${
                       isSelected
-                        ? "bg-blue-50 text-blue-600 font-bold"
-                        : "hover:bg-gray-100 text-gray-700"
+                        ? "bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-bold"
+                        : "hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-700 dark:text-slate-200"
                     }`}
                   >
                     <span className="truncate">{opt.label}</span>
                     {isSelected && (
-                      <Check className="w-3.5 h-3.5 text-blue-600 flex-shrink-0 ml-2" />
+                      <Check className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 flex-shrink-0 ml-2" />
                     )}
                   </div>
                 );
@@ -155,7 +163,11 @@ export const Select: React.FC<SelectProps> = ({
         </div>
       )}
 
-      {error && <p className="text-xs font-medium text-rose-500">{error}</p>}
+      {error && (
+        <p className="text-xs font-medium text-rose-500 dark:text-rose-400">
+          {error}
+        </p>
+      )}
     </div>
   );
 };

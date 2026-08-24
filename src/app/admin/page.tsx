@@ -9,7 +9,6 @@ import {
   TrendingUp,
   PieChart as PieIcon,
   BarChart3,
-  Loader2,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -79,7 +78,6 @@ export default function AdminDashboardPage() {
       try {
         setLoading(true);
 
-        // Intentamos obtener todas las citas si el servicio lo soporta, o traemos el listado base
         const fetchAppointments = async () => {
           if (typeof (AppointmentService as any).getAll === "function") {
             return await (AppointmentService as any).getAll();
@@ -156,7 +154,7 @@ export default function AdminDashboardPage() {
             })),
           );
 
-          // B) Procesar Evolución Mensual Dinámica REAL de Citas
+          // B) Procesar Evolución Mensual
           const monthlyMap: { [key: number]: number } = {
             0: 0,
             1: 0,
@@ -182,7 +180,6 @@ export default function AdminDashboardPage() {
             }
           });
 
-          // Mapeamos a los últimos 6 meses del año actual
           const currentMonth = new Date().getMonth();
           const last6Months = [];
           for (let i = 5; i >= 0; i--) {
@@ -205,9 +202,27 @@ export default function AdminDashboardPage() {
     fetchAdminData();
   }, []);
 
-  const ChartSkeleton = () => (
-    <div className="p-6 rounded-3xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 shadow-sm animate-pulse h-[260px] flex items-center justify-center">
-      <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
+  // Componentes de Skeleton
+  const StatCardSkeleton = () => (
+    <div className="p-5 rounded-3xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 shadow-sm animate-pulse flex items-center justify-between">
+      <div className="space-y-2">
+        <div className="h-3 w-20 bg-gray-200 dark:bg-slate-700 rounded-full" />
+        <div className="h-7 w-12 bg-gray-300 dark:bg-slate-600 rounded-lg" />
+        <div className="h-4 w-16 bg-gray-100 dark:bg-slate-700/60 rounded-full" />
+      </div>
+      <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-slate-700/80" />
+    </div>
+  );
+
+  const ChartSkeleton = ({ height = "h-[280px]" }: { height?: string }) => (
+    <div
+      className={`w-full ${height} bg-gray-100/60 dark:bg-slate-700/30 rounded-2xl animate-pulse flex items-end p-4 gap-3`}
+    >
+      <div className="w-full h-1/3 bg-gray-200/60 dark:bg-slate-600/40 rounded-t-lg" />
+      <div className="w-full h-2/3 bg-gray-200/60 dark:bg-slate-600/40 rounded-t-lg" />
+      <div className="w-full h-1/2 bg-gray-200/60 dark:bg-slate-600/40 rounded-t-lg" />
+      <div className="w-full h-4/5 bg-gray-200/60 dark:bg-slate-600/40 rounded-t-lg" />
+      <div className="w-full h-2/5 bg-gray-200/60 dark:bg-slate-600/40 rounded-t-lg" />
     </div>
   );
 
@@ -215,7 +230,7 @@ export default function AdminDashboardPage() {
     <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif] px-1 sm:px-0">
       {/* HEADER */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 tracking-tight">
           Panel de Administración
         </h1>
         <p className="text-sm text-gray-500 dark:text-slate-400 font-medium mt-1">
@@ -226,7 +241,12 @@ export default function AdminDashboardPage() {
       {/* KPIS PRINCIPALES */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
         {loading ? (
-          <p className="text-sm text-gray-400">Cargando indicadores...</p>
+          <>
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+          </>
         ) : (
           <>
             <StatCard
@@ -263,20 +283,20 @@ export default function AdminDashboardPage() {
 
       {/* SECCIÓN DE GRÁFICAS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* GRÁFICA 1: TENDENCIA REAL DE CITAS (2 Cols) */}
+        {/* GRÁFICA 1: TENDENCIA REAL DE CITAS */}
         <div className="lg:col-span-2 bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-3xl p-5 md:p-6 shadow-sm">
           <div className="mb-4">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-blue-500" />
               Evolución de Sesiones Atendidas
             </h2>
-            <p className="text-xs text-gray-400 dark:text-slate-500 font-medium mt-0.5">
+            <p className="text-xs text-gray-400 dark:text-slate-400 font-medium mt-0.5">
               Volumen de citas por mes (Últimos 6 meses)
             </p>
           </div>
 
           {loading ? (
-            <ChartSkeleton />
+            <ChartSkeleton height="h-[280px]" />
           ) : (
             <div className="h-[280px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -317,93 +337,98 @@ export default function AdminDashboardPage() {
           )}
         </div>
 
-        {/* GRÁFICA 2: DONA AJUSTADA (Sin desbordamiento) */}
+        {/* GRÁFICA 2: DONA DE ESPECIALIDADES */}
         <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-3xl p-5 md:p-6 shadow-sm flex flex-col justify-between overflow-hidden">
           <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
               <PieIcon className="w-5 h-5 text-emerald-500" />
               Especialidades
             </h2>
-            <p className="text-xs text-gray-400 dark:text-slate-500 font-medium mt-0.5">
+            <p className="text-xs text-gray-400 dark:text-slate-400 font-medium mt-0.5">
               Demanda por categoría
             </p>
           </div>
 
           {loading ? (
-            <ChartSkeleton />
-          ) : (
-            <div className="h-[200px] w-full my-auto">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={
-                      therapyDistribution.length > 0
-                        ? therapyDistribution
-                        : [{ name: "Sin Citas", value: 1 }]
-                    }
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={45}
-                    outerRadius={65}
-                    paddingAngle={4}
-                    dataKey="value"
-                  >
-                    {therapyDistribution.map((_, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "rgba(15, 23, 42, 0.9)",
-                      borderRadius: "12px",
-                      borderColor: "#334155",
-                      color: "#fff",
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+            <div className="my-auto py-4">
+              <div className="w-32 h-32 rounded-full border-8 border-gray-200 dark:border-slate-700 border-t-blue-500 dark:border-t-blue-400 animate-spin mx-auto" />
             </div>
-          )}
-
-          {/* Leyenda Personalizada dentro de un scroll contenedor para prevenir desbordamiento */}
-          <div className="max-h-[80px] overflow-y-auto space-y-1.5 pr-1 mt-2 border-t border-gray-100 dark:border-slate-700/50 pt-2">
-            {therapyDistribution.map((item, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between text-xs"
-              >
-                <div className="flex items-center gap-2 truncate">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                  />
-                  <span className="text-gray-600 dark:text-slate-300 truncate">
-                    {item.name}
-                  </span>
-                </div>
-                <span className="font-semibold text-gray-900 dark:text-white">
-                  {item.value}
-                </span>
+          ) : (
+            <>
+              <div className="h-[200px] w-full my-auto">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={
+                        therapyDistribution.length > 0
+                          ? therapyDistribution
+                          : [{ name: "Sin Citas", value: 1 }]
+                      }
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={45}
+                      outerRadius={65}
+                      paddingAngle={4}
+                      dataKey="value"
+                    >
+                      {therapyDistribution.map((_, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "rgba(15, 23, 42, 0.9)",
+                        borderRadius: "12px",
+                        borderColor: "#334155",
+                        color: "#fff",
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
-            ))}
-          </div>
+
+              <div className="max-h-[80px] overflow-y-auto space-y-1.5 pr-1 mt-2 border-t border-gray-100 dark:border-slate-700/50 pt-2">
+                {therapyDistribution.map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between text-xs"
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style={{
+                          backgroundColor: COLORS[index % COLORS.length],
+                        }}
+                      />
+                      <span className="text-gray-600 dark:text-slate-300 truncate">
+                        {item.name}
+                      </span>
+                    </div>
+                    <span className="font-semibold text-gray-900 dark:text-slate-100">
+                      {item.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
       {/* ESTADO DE PACIENTES */}
       <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-3xl p-5 md:p-6 shadow-sm">
         <div className="mb-4">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-purple-500" />
             Condición de Pacientes
           </h2>
         </div>
 
         {loading ? (
-          <ChartSkeleton />
+          <ChartSkeleton height="h-[200px]" />
         ) : (
           <div className="h-[200px] w-full">
             <ResponsiveContainer width="100%" height="100%">

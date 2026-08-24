@@ -100,7 +100,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Botón de Colapsar */}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className={`p-2 text-gray-400 hover:text-blue-600 dark:hover:bg-slate-800 rounded-xl transition-all duration-200 shrink-0 ${
+            className={`p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 dark:hover:bg-slate-800 rounded-xl transition-all duration-200 shrink-0 ${
               isCollapsed ? "w-full flex justify-center" : ""
             }`}
             title={isCollapsed ? "Expandir menú" : "Contraer menú"}
@@ -132,7 +132,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     title={isCollapsed ? item.label : undefined}
                     className={`group flex items-center gap-3 px-2.5 py-2 rounded-2xl text-[13px] transition-all duration-200 ${
                       isActive
-                        ? "bg-gray-300 dark:bg-slate-800 text-black dark:text-white shadow-md shadow-gray-400/20 dark:shadow-none scale-[1.01]"
+                        ? "bg-gray-300/80 dark:bg-slate-800 text-black dark:text-white shadow-md shadow-gray-400/20 dark:shadow-none scale-[1.01]"
                         : "text-gray-800 dark:text-slate-300 hover:bg-gray-200/70 dark:hover:bg-slate-800/60 hover:text-gray-900 dark:hover:text-white"
                     } ${isCollapsed ? "justify-center" : ""}`}
                   >
@@ -168,7 +168,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           title={isCollapsed ? `Perfil - ${displayRole}` : undefined}
           className={`flex items-center gap-3 p-2 rounded-2xl transition-all duration-200 cursor-pointer ${
             isProfileActive
-              ? "bg-gray-300 dark:bg-slate-800 text-black dark:text-white shadow-sm"
+              ? "bg-gray-300/80 dark:bg-slate-800 text-black dark:text-white shadow-sm"
               : "hover:bg-gray-200/60 dark:hover:bg-slate-800/60"
           } ${isCollapsed ? "justify-center" : ""}`}
         >

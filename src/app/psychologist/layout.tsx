@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import RoleGuard from "@/components/auth/RoleGuard";
 
-// Opciones de navegación con rutas ÚNICAS
+// Opciones de navegación con íconos adaptables al modo oscuro
 const psychologistGroups: SidebarGroup[] = [
   {
     title: "Consulta",
@@ -19,17 +19,21 @@ const psychologistGroups: SidebarGroup[] = [
       {
         label: "Inicio",
         href: "/psychologist",
-        icon: <HomeIcon className="w-4 h-4 text-blue-600" />,
+        icon: <HomeIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />,
       },
       {
         label: "Sesiones",
         href: "/psychologist/session",
-        icon: <NotebookIcon className="w-4 h-4 text-blue-600" />,
+        icon: (
+          <NotebookIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+        ),
       },
       {
         label: "Historial Clínico",
         href: "/psychologist/medical_history",
-        icon: <FolderClock className="w-4 h-4 text-blue-600" />,
+        icon: (
+          <FolderClock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+        ),
       },
     ],
   },
@@ -39,12 +43,14 @@ const psychologistGroups: SidebarGroup[] = [
       {
         label: "Pacientes",
         href: "/psychologist/patient",
-        icon: <User className="w-4 h-4 text-blue-600" />,
+        icon: <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />,
       },
       {
         label: "Consentimientos",
         href: "/psychologist/consent",
-        icon: <ListCheck className="w-4 h-4 text-blue-600" />,
+        icon: (
+          <ListCheck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+        ),
       },
     ],
   },
@@ -57,7 +63,7 @@ export default function PsychologistLayout({
 }) {
   return (
     <RoleGuard allowedRoles={["psychologist", "admin"]}>
-      <div className="flex min-h-screen bg-[#FFFFFF]">
+      <div className="flex min-h-screen bg-white dark:bg-slate-950 text-gray-900 dark:text-slate-100">
         <Sidebar
           title="Centro Psicologico"
           subtitle="Integral Sensuntepeque"

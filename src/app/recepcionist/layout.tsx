@@ -12,12 +12,14 @@ const recepcionistGroups: SidebarGroup[] = [
       {
         label: "Inicio",
         href: "/recepcionist",
-        icon: <HomeIcon className="w-4 h-4 text-blue-600" />,
+        icon: <HomeIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />,
       },
       {
         label: "Citas",
         href: "/recepcionist/appointment",
-        icon: <Clipboard className="w-4 h-4 text-blue-600" />,
+        icon: (
+          <Clipboard className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+        ),
       },
     ],
   },
@@ -27,12 +29,14 @@ const recepcionistGroups: SidebarGroup[] = [
       {
         label: "Pacientes",
         href: "/recepcionist/patient",
-        icon: <User className="w-4 h-4 text-blue-600" />,
+        icon: <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />,
       },
       {
         label: "Consentimientos",
         href: "/recepcionist/consent",
-        icon: <ListCheck className="w-4 h-4 text-blue-600" />,
+        icon: (
+          <ListCheck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+        ),
       },
     ],
   },
@@ -45,7 +49,7 @@ export default function RecepcionistLayout({
 }) {
   return (
     <RoleGuard allowedRoles={["receptionist", "recepcionist", "admin"]}>
-      <div className="flex min-h-screen bg-[#FFFFFF]">
+      <div className="flex min-h-screen bg-white dark:bg-slate-950 text-gray-900 dark:text-slate-100">
         <aside className="sticky top-0 h-screen flex-shrink-0 z-20">
           <Sidebar
             title="Centro Psicologico"

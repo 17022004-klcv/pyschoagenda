@@ -12,6 +12,8 @@ import {
   Camera,
   Info,
   LogOut,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { showAlert } from "@/lib/sweetalert";
 import { uploadImageToImgBB } from "@/lib/imgbb";
@@ -85,6 +87,7 @@ const UserProfileForm: React.FC<{
   const [photoURL, setPhotoURL] = useState(user.photoURL || "");
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const [formData, setFormData] = useState({
     name: user.name || "",
@@ -98,14 +101,31 @@ const UserProfileForm: React.FC<{
   const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      name: user.name || "",
-      email: user.email || "",
-      phone: user.phone || "",
-    }));
-    setPhotoURL(user.photoURL || "");
-  }, [user]);
+    const savedTheme = localStorage.getItem("theme");
+    const systemPrefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)",
+    ).matches;
+
+    if (savedTheme === "dark" || (!savedTheme && systemPrefersDark)) {
+      setIsDarkMode(true);
+      document.documentElement.classList.add("dark");
+    } else {
+      setIsDarkMode(false);
+      document.documentElement.classList.remove("dark");
+    }
+  }, []);
+
+  const toggleDarkMode = () => {
+    if (isDarkMode) {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+      setIsDarkMode(false);
+    } else {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+      setIsDarkMode(true);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -472,6 +492,36 @@ const UserProfileForm: React.FC<{
           </button>
         </div>
       </form>
+
+      {/* 🟢 PREFERENCIA DE APARIENCIA */}
+      <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-3xl p-6 shadow-sm flex items-center justify-between gap-4">
+        <div className="space-y-0.5">
+          <h3 className="text-base font-bold text-gray-900 dark:text-white tracking-tight">
+            Apariencia del Sistema
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-slate-400 font-medium">
+            Personaliza el tema visual para este navegador.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={toggleDarkMode}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gray-100 dark:bg-slate-900 text-gray-800 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-700/80 border border-gray-200/80 dark:border-slate-700 font-bold text-xs transition-all cursor-pointer shrink-0"
+        >
+          {isDarkMode ? (
+            <>
+              <Sun className="w-4 h-4 text-amber-400" />
+              <span>Modo Claro</span>
+            </>
+          ) : (
+            <>
+              <Moon className="w-4 h-4 text-indigo-500" />
+              <span>Modo Oscuro</span>
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 };

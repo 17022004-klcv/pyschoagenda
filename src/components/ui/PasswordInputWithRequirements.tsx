@@ -45,12 +45,12 @@ export const PasswordInputWithRequirements: React.FC<Props> = ({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="••••••••"
-          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all pr-10"
+          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900/80 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:outline-none transition-all pr-10"
         />
         <button
           type="button"
           onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-slate-200"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
         >
           {showPassword ? (
             <EyeOff className="w-4 h-4" />
@@ -62,7 +62,7 @@ export const PasswordInputWithRequirements: React.FC<Props> = ({
 
       {/* Requisitos visuales dentro del Modal */}
       {value.length > 0 && (
-        <div className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl border border-gray-200/80 dark:border-slate-700 space-y-1.5 text-xs">
+        <div className="p-3 bg-gray-50 dark:bg-slate-900/50 rounded-xl border border-gray-200/80 dark:border-slate-700/80 space-y-1.5 text-xs">
           <p className="font-semibold text-gray-600 dark:text-slate-300 mb-1">
             Requisitos de seguridad:
           </p>
@@ -72,13 +72,13 @@ export const PasswordInputWithRequirements: React.FC<Props> = ({
               className={`flex items-center gap-1.5 transition-colors ${
                 req.met
                   ? "text-emerald-600 dark:text-emerald-400 font-medium"
-                  : "text-gray-400 dark:text-slate-400"
+                  : "text-gray-400 dark:text-slate-500"
               }`}
             >
               {req.met ? (
-                <Check className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                <Check className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
               ) : (
-                <X className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                <X className="w-3.5 h-3.5 text-gray-400 dark:text-slate-500 flex-shrink-0" />
               )}
               <span>{req.label}</span>
             </div>

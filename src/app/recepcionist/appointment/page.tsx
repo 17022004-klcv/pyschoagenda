@@ -300,14 +300,14 @@ export default function AppointmentsPage() {
       header: "Paciente(s)",
       accessor: (app) => (
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-bold shrink-0">
-            <User className="w-4 h-4" />
+          <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold shrink-0">
+            <User className="w-5 h-5" />
           </div>
           <div>
-            <span className="font-bold text-gray-900 text-base block">
+            <span className="font-bold text-gray-900 dark:text-slate-100 text-base block">
               {app.patientNames?.join(", ")}
             </span>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-400 dark:text-slate-400 mt-0.5">
               {app.patientNames?.length > 1
                 ? `${app.patientNames.length} Pacientes`
                 : "Paciente Individual"}
@@ -319,7 +319,7 @@ export default function AppointmentsPage() {
     {
       header: "Tipo de Terapia",
       accessor: (app) => (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800 border border-gray-200">
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 border border-gray-200 dark:border-slate-700">
           {app.therapyType}
         </span>
       ),
@@ -344,20 +344,20 @@ export default function AppointmentsPage() {
       accessor: (app) => {
         if (app.status === "Completada")
           return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-900/60">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
               Completada
             </span>
           );
         if (app.status === "Cancelada")
           return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200/60">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60">
               <XCircle className="w-3.5 h-3.5 text-rose-600" />
               Cancelada
             </span>
           );
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200/60">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-900/60">
             <Clock3 className="w-3.5 h-3.5 text-amber-600" />
             Programada
           </span>

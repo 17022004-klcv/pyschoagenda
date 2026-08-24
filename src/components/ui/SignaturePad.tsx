@@ -26,7 +26,10 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
       ctx.lineWidth = 2.5;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
-      ctx.strokeStyle = "#0F172A";
+
+      // Detecta si la interfaz está en modo oscuro para ajustar el color del trazo
+      const isDarkMode = document.documentElement.classList.contains("dark");
+      ctx.strokeStyle = isDarkMode ? "#F8FAFC" : "#0F172A";
     }
   }, []);
 
@@ -61,6 +64,10 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
     const { x, y } = getCoordinates(e);
 
     if (ctx) {
+      // Reasegura el color de trazo al empezar a dibujar según el tema actual
+      const isDarkMode = document.documentElement.classList.contains("dark");
+      ctx.strokeStyle = isDarkMode ? "#F8FAFC" : "#0F172A";
+
       ctx.beginPath();
       ctx.moveTo(x, y);
     }
@@ -105,7 +112,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
 
   return (
     <div className="space-y-3">
-      <div className="border-2 border-dashed border-gray-300 rounded-2xl bg-slate-50 relative overflow-hidden touch-none">
+      <div className="border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-2xl bg-slate-50 dark:bg-slate-900/60 relative overflow-hidden touch-none transition-colors">
         <canvas
           ref={canvasRef}
           width={500}
@@ -120,7 +127,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
           onTouchEnd={stopDrawing}
         />
         {!hasSignature && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-gray-400 text-xs font-medium">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-gray-400 dark:text-slate-500 text-xs font-medium">
             Firme aquí con el dedo, lápiz o mouse
           </div>
         )}

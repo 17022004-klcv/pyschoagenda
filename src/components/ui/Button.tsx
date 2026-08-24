@@ -29,18 +29,19 @@ export const Button: React.FC<ButtonProps> = ({
     lg: "px-5 py-3 text-base gap-2.5",
   };
 
-  // Variantes de color
+  // Variantes de color adaptadas para modo claro y oscuro
   const variants = {
     primary:
-      "bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/15",
+      "bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white shadow-md shadow-blue-500/15 dark:shadow-blue-900/30",
     secondary:
-      "bg-gray-100 hover:bg-gray-200/80 text-gray-800 border border-gray-200/60",
+      "bg-gray-100 hover:bg-gray-200/80 text-gray-800 border border-gray-200/60 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-slate-700",
     danger:
-      "bg-rose-500 hover:bg-rose-600 text-white shadow-md shadow-rose-500/15",
-    ghost: "bg-transparent hover:bg-gray-100 text-gray-600",
-    link: "bg-transparent text-blue-600 hover:text-blue-700 p-0 shadow-none font-bold",
+      "bg-rose-500 hover:bg-rose-600 dark:bg-rose-600 dark:hover:bg-rose-500 text-white shadow-md shadow-rose-500/15 dark:shadow-rose-900/30",
+    ghost:
+      "bg-transparent hover:bg-gray-100 text-gray-600 dark:hover:bg-slate-800 dark:text-slate-300",
+    link: "bg-transparent text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 p-0 shadow-none font-bold",
     outline:
-      "bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 shadow-sm",
+      "bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 shadow-sm dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:border-slate-700",
   };
 
   return (

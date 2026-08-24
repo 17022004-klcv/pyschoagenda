@@ -116,7 +116,7 @@ export default function AuditLogPage() {
     {
       header: "Colección",
       accessor: (log) => (
-        <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-gray-100 text-gray-800 font-bold">
+        <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 border border-transparent dark:border-slate-700/60 font-bold">
           {log.collectionName}
         </span>
       ),
@@ -125,11 +125,11 @@ export default function AuditLogPage() {
       header: "Usuario Responsable",
       accessor: (log) => (
         <div>
-          <div className="font-bold text-gray-900 flex items-center gap-1.5">
-            <User className="w-3.5 h-3.5 text-gray-400" />
+          <div className="font-bold text-gray-900 dark:text-slate-100 flex items-center gap-1.5">
+            <User className="w-3.5 h-3.5 text-gray-400 dark:text-slate-500" />
             {log.performedBy?.name || "Sistema / Desconocido"}
           </div>
-          <div className="text-[10px] text-gray-400">
+          <div className="text-[10px] text-gray-400 dark:text-slate-400">
             {log.performedBy?.email || "N/A"}
           </div>
         </div>
@@ -138,10 +138,10 @@ export default function AuditLogPage() {
     {
       header: "Detalle del Evento",
       accessor: (log) => (
-        <div className="max-w-xs font-medium text-gray-700">
+        <div className="max-w-xs font-medium text-gray-700 dark:text-slate-300">
           <p>{log.details}</p>
           {log.documentId && (
-            <span className="block text-[10px] font-mono text-gray-400 mt-0.5">
+            <span className="block text-[10px] font-mono text-gray-400 dark:text-slate-500 mt-0.5">
               ID Doc: {log.documentId}
             </span>
           )}
