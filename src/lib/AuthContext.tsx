@@ -21,16 +21,12 @@ interface AuthContextType {
   loading: boolean;
 }
 
-// 🟢 1. PÁGINAS DE INICIO (A dónde los manda al loguearse)
-// Importante: Sin slash al final. Si no tienes page.tsx en /admin, pon /admin/patient o tu pantalla principal.
 const HOME_PAGES: Record<string, string> = {
   admin: "/admin",
   psychologist: "/psychologist",
   receptionist: "/recepcionist",
 };
 
-// 🟢 2. PERMISOS POR ROL
-// La clave "receptionist" es como está en Firebase. Las rutas "/recepcionist/..." son como se llaman tus carpetas.
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   admin: ["/admin", "/psychologist", "/recepcionist"],
   psychologist: [
@@ -43,7 +39,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   ],
   receptionist: [
     "/recepcionist",
-    "/recepcionist/appointment", // Corregido 'appointment' con 't'
+    "/recepcionist/appointment",
     "/recepcionist/consent",
     "/recepcionist/patient",
     "/recepcionist/profile",
@@ -79,8 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const data = userDoc.data() as UserDocument;
             setUserData(data);
 
-            // Normalizamos el rol que viene de Firebase
-            const userRole = data.role?.toLowerCase().trim() || "receptionist";
+            const userRole = data.role?.toLowerCase().trim() || "unassigned";
 
             setCurrentUser({
               uid: firebaseUser.uid,
@@ -93,18 +88,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               role: userRole,
             });
 
-            // Estatus del usuario
-            if (data.status === "pending" && pathname !== "/pending") {
-              router.push("/pending");
-              setLoading(false);
-              return;
-            } else if (data.status === "rejected" && pathname !== "/login") {
-              router.push("/login");
+            // 1. Control de cuentas Inactivas, Rechazadas o Pendientes
+            if (data.status === "pending" || userRole === "unassigned") {
+              if (pathname !== "/pending") {
+                router.push("/pending");
+              }
               setLoading(false);
               return;
             }
 
-            // Validación de rutas
+            if (data.status === "inactive" || data.status === "rejected") {
+              if (pathname !== "/login") {
+                router.push("/login");
+              }
+              setLoading(false);
+              return;
+            }
+
+            // 2. Control de accesos para usuarios ACTIVOS con ROL
             const allowedRoutes = ROLE_PERMISSIONS[userRole] || [];
             const homePage = HOME_PAGES[userRole] || "/login";
 
@@ -112,10 +113,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               pathname.startsWith(route),
             );
 
+            // Si intenta entrar al login o pending teniendo ya un rol activo
             if (PUBLIC_ROUTES.includes(pathname)) {
               router.push(homePage);
-            } else if (!isAllowed && pathname !== "/pending") {
+            } else if (!isAllowed) {
               router.push(homePage);
+            }
+          } else {
+            // Usuario en Auth pero no existe aún en Firestore
+            if (pathname !== "/pending") {
+              router.push("/pending");
             }
           }
         } catch (error) {

@@ -13,11 +13,13 @@ import {
   Shield,
   Loader2,
   AlertCircle,
+  Edit2,
 } from "lucide-react";
 import { UserAccount, UserRole } from "@/types/user";
 import { adminService } from "@/services/admin.service";
 import { useAuth } from "@/lib/AuthContext";
 import { formatters } from "@/lib/validators";
+import { showAlert } from "@/lib/sweetalert"; // 🟢 Importación de SweetAlert
 
 export default function ApplicationPage() {
   const { userData } = useAuth();
@@ -53,7 +55,9 @@ export default function ApplicationPage() {
       const data = await adminService.getAccessRequests();
       setRequests(data);
     } catch (err: any) {
-      setError(err.message || "Error al conectar con Firestore.");
+      const errorMessage = err.message || "Error al conectar con Firestore.";
+      setError(errorMessage);
+      showAlert.errorToast(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -65,7 +69,11 @@ export default function ApplicationPage() {
 
   const handleOpenApproveModal = (request: UserAccount) => {
     setSelectedRequest(request);
-    setAssignedRole("psychologist");
+    setAssignedRole(
+      request.role && request.role !== "unassigned"
+        ? (request.role as UserRole)
+        : "psychologist",
+    );
     setIsModalOpen(true);
   };
 
@@ -82,21 +90,39 @@ export default function ApplicationPage() {
       );
       setIsModalOpen(false);
       setSelectedRequest(null);
+      showAlert.successToast("Permisos y acceso actualizados correctamente.");
       await fetchRequests();
     } catch (err: any) {
-      alert(err.message || "No se pudo aprobar la solicitud.");
+      showAlert.errorToast(err.message || "No se pudo actualizar el acceso.");
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleReject = async (uid: string) => {
+  const handleReject = async (request: UserAccount) => {
+    const isRevoking = request.status === "active";
+    const confirmMessage = isRevoking
+      ? `¿Revocar acceso a ${request.name}?`
+      : `¿Rechazar la solicitud de ${request.name}?`;
+
+    const confirmed = await showAlert.confirm(
+      confirmMessage,
+      isRevoking
+        ? "El usuario perderá el acceso a la plataforma."
+        : "Esta solicitud quedará marcada como rechazada.",
+    );
+
+    if (!confirmed) return;
+
     try {
       setActionLoading(true);
-      await adminService.rejectUser(uid, currentUser);
+      await adminService.rejectUser(request.uid, currentUser);
+      showAlert.successToast(
+        isRevoking ? "Acceso revocado." : "Solicitud rechazada.",
+      );
       await fetchRequests();
     } catch (error: any) {
-      alert(error.message || "Error al rechazar la solicitud.");
+      showAlert.errorToast(error.message || "Error al procesar la acción.");
     } finally {
       setActionLoading(false);
     }
@@ -112,6 +138,7 @@ export default function ApplicationPage() {
 
     return matchesSearch && matchesStatus;
   });
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif] px-1 sm:px-0">
       {/* Header + Buscador y Filtro */}
@@ -121,12 +148,13 @@ export default function ApplicationPage() {
             Solicitudes de Acceso
           </h1>
           <p className="text-xs font-medium text-gray-500 dark:text-slate-400 mt-1">
-            Gestiona los nuevos registros e ingresantes de la plataforma.
+            Gestiona los permisos y estado de ingreso de los usuarios en la
+            plataforma.
           </p>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-          {/* Buscador de estilo Pacientes */}
+          {/* Buscador */}
           <div className="relative flex-1 sm:w-64">
             <Search className="w-4 h-4 text-gray-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -154,7 +182,7 @@ export default function ApplicationPage() {
         </div>
       </div>
 
-      {/* 💀 SKELETON DE CARGA / ERROR / LISTA */}
+      {/* SKELETON DE CARGA / ERROR / LISTA */}
       {loading ? (
         <div className="grid gap-4">
           {[...Array(4)].map((_, idx) => (
@@ -163,10 +191,7 @@ export default function ApplicationPage() {
               className="p-4 bg-white dark:bg-slate-900 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-pulse"
             >
               <div className="flex items-center gap-3.5">
-                {/* Avatar Skeleton */}
                 <div className="w-11 h-11 rounded-full bg-gray-200 dark:bg-slate-800 shrink-0" />
-
-                {/* Info Text Skeleton */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <div className="h-4 bg-gray-200 dark:bg-slate-800 rounded-lg w-32" />
@@ -178,8 +203,6 @@ export default function ApplicationPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Actions Skeleton */}
               <div className="flex items-center gap-2 self-end sm:self-center">
                 <div className="h-9 w-24 bg-gray-200 dark:bg-slate-800 rounded-xl" />
                 <div className="h-9 w-36 bg-gray-200 dark:bg-slate-800 rounded-xl" />
@@ -221,15 +244,39 @@ export default function ApplicationPage() {
                   )}
 
                   <div>
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                      {req.name}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+                        {req.name}
+                      </h3>
                       {req.role && req.role !== "unassigned" && (
-                        <span className="px-2.5 py-0.5 text-[10px] font-semibold bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-300 rounded-full border border-blue-100 dark:border-blue-900">
-                          {req.role}
+                        <span className="px-2.5 py-0.5 text-[10px] font-semibold bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-300 rounded-full border border-purple-100 dark:border-purple-900 capitalize">
+                          {req.role === "psychologist"
+                            ? "Psicólogo"
+                            : req.role === "receptionist"
+                              ? "Recepcionista"
+                              : req.role}
                         </span>
                       )}
-                    </h3>
-                    <div className="flex items-center gap-2.5 mt-0.5 text-xs text-gray-500 dark:text-slate-400 font-medium">
+
+                      {/* Insignias de estado */}
+                      {req.status === "active" && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50">
+                          <CheckCircle2 className="w-3 h-3" /> Activo
+                        </span>
+                      )}
+                      {req.status === "rejected" && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50">
+                          <XCircle className="w-3 h-3" /> Rechazado
+                        </span>
+                      )}
+                      {req.status === "pending" && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50">
+                          <Clock className="w-3 h-3" /> Pendiente
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2.5 mt-1 text-xs text-gray-500 dark:text-slate-400 font-medium">
                       <span className="flex items-center gap-1">
                         <Mail className="w-3.5 h-3.5" />
                         {req.email}
@@ -245,43 +292,51 @@ export default function ApplicationPage() {
                   </div>
                 </div>
 
+                {/* Acciones */}
                 <div className="flex items-center gap-2 self-end sm:self-center">
-                  {req.status === "pending" && (
-                    <>
-                      <button
-                        type="button"
-                        disabled={actionLoading}
-                        onClick={() => handleReject(req.uid)}
-                        className="px-3.5 py-2 rounded-xl border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-                      >
-                        <UserX className="w-4 h-4" />
-                        <span>Rechazar</span>
-                      </button>
-                      <button
-                        type="button"
-                        disabled={actionLoading}
-                        onClick={() => handleOpenApproveModal(req)}
-                        className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer disabled:opacity-50"
-                      >
+                  {req.status !== "rejected" && (
+                    <button
+                      type="button"
+                      disabled={actionLoading}
+                      onClick={() => handleReject(req)}
+                      className="px-3 py-2 rounded-xl border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                      title="Rechazar o revocar acceso"
+                    >
+                      <UserX className="w-4 h-4" />
+                      <span>
+                        {req.status === "active"
+                          ? "Revocar Acceso"
+                          : "Rechazar"}
+                      </span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={actionLoading}
+                    onClick={() => handleOpenApproveModal(req)}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer disabled:opacity-50 ${
+                      req.status === "active"
+                        ? "bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200"
+                        : "bg-purple-600 hover:bg-purple-700 text-white"
+                    }`}
+                  >
+                    {req.status === "active" ? (
+                      <>
+                        <Edit2 className="w-3.5 h-3.5" />
+                        <span>Editar Rol</span>
+                      </>
+                    ) : (
+                      <>
                         <UserCheck className="w-4 h-4" />
-                        <span>Aprobar y Asignar Rol</span>
-                      </button>
-                    </>
-                  )}
-
-                  {req.status === "active" && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50">
-                      <CheckCircle2 className="w-4 h-4" />
-                      Aprobado / Activo
-                    </span>
-                  )}
-
-                  {req.status === "rejected" && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50">
-                      <XCircle className="w-4 h-4" />
-                      Rechazado
-                    </span>
-                  )}
+                        <span>
+                          {req.status === "rejected"
+                            ? "Re-aprobar"
+                            : "Aprobar y Asignar Rol"}
+                        </span>
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
             ))
@@ -289,13 +344,15 @@ export default function ApplicationPage() {
         </div>
       )}
 
-      {/* Modal para Aprobar y Asignar Rol */}
+      {/* Modal para Aprobar / Editar Rol */}
       {isModalOpen && selectedRequest && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-gray-100 dark:border-slate-800">
             <div>
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                Aprobar Solicitud de Acceso
+                {selectedRequest.status === "active"
+                  ? "Editar Rol de Usuario"
+                  : "Aprobar Solicitud de Acceso"}
               </h2>
               <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
                 Asigna el rol que determinará los permisos de{" "}
@@ -358,7 +415,7 @@ export default function ApplicationPage() {
                 className="px-4 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold flex items-center gap-2 transition-colors shadow-xs disabled:opacity-50"
               >
                 {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                Confirmar y Activar Acceso
+                Guardar Cambios
               </button>
             </div>
           </div>

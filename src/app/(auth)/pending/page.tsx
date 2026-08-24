@@ -2,12 +2,20 @@
 
 import React from "react";
 import { Clock, LogOut } from "lucide-react";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { useRouter } from "next/navigation";
 
 export default function PendingApprovalPage() {
-  const handleLogout = () => {
-    // Aquí ejecutas la lógica de tu cerrar sesión (Supabase / Firebase / NextAuth)
-    // e.g., router.push('/login') o signOut()
-    window.location.href = "/login";
+  const router = useRouter();
+  const handleLogout = async () => {
+    try {
+      await signOut(auth); // 🟢 Importante: Cierra la sesión en Firebase
+      router.push("/login");
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+      window.location.href = "/login";
+    }
   };
 
   return (
