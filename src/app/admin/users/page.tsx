@@ -34,7 +34,8 @@ import { Table, Column } from "@/components/ui/Table";
 import { Select } from "@/components/ui/Select";
 import { ModalSheet } from "@/components/ui/Modal";
 import { UsersListPDF, SingleUserPDF } from "@/components/pdf/UserPDF";
-import { formatters } from "@/lib/validators";
+import { formatters, validatePasswordSecurity } from "@/lib/validators";
+import { PasswordInputWithRequirements } from "@/components/ui/PasswordInputWithRequirements";
 
 export default function UsersPage() {
   const { userData } = useAuth();
@@ -64,6 +65,10 @@ export default function UsersPage() {
     setIsStatusModalOpen(true);
   };
 
+  const [password, setPassword] = useState("");
+
+  // Chequeo dinámico si la contraseña es válida
+  const isPasswordValid = validatePasswordSecurity(password).isValid;
   // Formulario
   const [formData, setFormData] = useState<UserFormData>({
     name: "",
@@ -110,6 +115,15 @@ export default function UsersPage() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isPasswordValid) return; // Bloqueo de seguridad
+
+    await createUserWithAuth({
+      ...formData,
+      password,
+    });
+  };
 
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
@@ -636,7 +650,7 @@ export default function UsersPage() {
             </div>
           </div>
 
-          {/* Campo Contraseña */}
+          {/* Campo Contraseña con Requisitos en Vivo */}
           <div>
             <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
               <Lock className="w-3.5 h-3.5 text-gray-400" />
@@ -656,9 +670,58 @@ export default function UsersPage() {
                   password: formatters.maxLength(e.target.value, 30),
                 })
               }
-              placeholder={selectedUser ? "••••••••" : "Mínimo 6 caracteres"}
+              placeholder={
+                selectedUser ? "••••••••" : "Ingresa una contraseña segura"
+              }
               className="w-full px-3.5 py-2.5 bg-[#F8F9FA] dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-2xl text-sm font-medium text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"
             />
+
+            {/* Requisitos visuales dentro del Modal */}
+            {(formData.password || "").length > 0 && (
+              <div className="mt-2.5 p-3 bg-gray-50 dark:bg-slate-800/60 rounded-2xl border border-gray-200/80 dark:border-slate-700/80 space-y-1 text-xs">
+                <p className="font-semibold text-gray-600 dark:text-slate-300 mb-1.5">
+                  La contraseña debe contener:
+                </p>
+                {[
+                  {
+                    label: "Mínimo 8 caracteres",
+                    met: (formData.password || "").length >= 8,
+                  },
+                  {
+                    label: "Una letra mayúscula (A-Z)",
+                    met: /[A-Z]/.test(formData.password || ""),
+                  },
+                  {
+                    label: "Una letra minúscula (a-z)",
+                    met: /[a-z]/.test(formData.password || ""),
+                  },
+                  {
+                    label: "Un número (0-9)",
+                    met: /[0-9]/.test(formData.password || ""),
+                  },
+                  {
+                    label: "Un carácter especial (@, #, $, %)",
+                    met: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(
+                      formData.password || "",
+                    ),
+                  },
+                ].map((req, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex items-center gap-2 transition-colors ${
+                      req.met
+                        ? "text-emerald-600 dark:text-emerald-400 font-medium"
+                        : "text-gray-400 dark:text-slate-500"
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${req.met ? "bg-emerald-500" : "bg-gray-300 dark:bg-slate-600"}`}
+                    />
+                    <span>{req.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

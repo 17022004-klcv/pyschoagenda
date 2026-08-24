@@ -50,3 +50,35 @@ export const validators = {
     return phoneRegex.test(value);
   },
 };
+
+export interface PasswordValidation {
+  isValid: boolean;
+  errors: string[];
+}
+
+export const validatePasswordSecurity = (
+  password: string,
+): PasswordValidation => {
+  const errors: string[] = [];
+
+  if (password.length < 8) {
+    errors.push("Mínimo 8 caracteres");
+  }
+  if (!/[A-Z]/.test(password)) {
+    errors.push("Al menos una letra mayúscula (A-Z)");
+  }
+  if (!/[a-z]/.test(password)) {
+    errors.push("Al menos una letra minúscula (a-z)");
+  }
+  if (!/[0-9]/.test(password)) {
+    errors.push("Al menos un número (0-9)");
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    errors.push("Al menos un carácter especial (ej. @, #, $, %)");
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+};

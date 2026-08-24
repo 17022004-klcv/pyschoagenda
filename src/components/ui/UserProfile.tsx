@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { showAlert } from "@/lib/sweetalert";
 import { uploadImageToImgBB } from "@/lib/imgbb";
-import { formatters } from "@/lib/validators";
+import { formatters, validatePasswordSecurity } from "@/lib/validators";
 
 export interface UserProfileData {
   id: string;
@@ -39,7 +39,6 @@ interface UserProfileProps {
   onLogout?: () => Promise<void>;
 }
 
-// Subcomponente de Skeleton aislador para el renderizado condicional
 const ProfileSkeleton = () => (
   <div className="space-y-6 animate-pulse max-w-4xl mx-auto px-1 sm:px-0">
     <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700/80 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6">
@@ -69,7 +68,6 @@ export const UserProfile: React.FC<UserProfileProps> = ({
   onSave,
   onLogout,
 }) => {
-  // 🟢 1. Renderizado condicional antes de manipular el objeto `user`
   if (isPageLoading || !user) {
     return <ProfileSkeleton />;
   }
@@ -77,7 +75,6 @@ export const UserProfile: React.FC<UserProfileProps> = ({
   return <UserProfileForm user={user} onSave={onSave} onLogout={onLogout} />;
 };
 
-// Componente interno con los hooks de formulario asegurando que `user` NUNCA es null
 const UserProfileForm: React.FC<{
   user: UserProfileData;
   onSave?: UserProfileProps["onSave"];
@@ -100,7 +97,6 @@ const UserProfileForm: React.FC<{
   const [loading, setLoading] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  // Sincronizar datos por si `user` cambia desde Firebase externamente
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
@@ -115,15 +111,12 @@ const UserProfileForm: React.FC<{
     const { name, value } = e.target;
     let formattedValue = value;
 
-    // 🟢 Formateos dinámicos según el nombre del input
     if (name === "name") {
       formattedValue = formatters.maxLength(value, 60);
     } else if (name === "newPassword" || name === "confirmPassword") {
       formattedValue = formatters.maxLength(value, 30);
     } else if (name === "phone") {
       formattedValue = formatters.phone(value);
-    } else if (name === "dui") {
-      formattedValue = formatters.dui(value);
     }
 
     setFormData((prev) => ({
@@ -182,13 +175,16 @@ const UserProfileForm: React.FC<{
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // 🔒 Validación de Seguridad para la Nueva Contraseña
     if (formData.newPassword) {
-      if (formData.newPassword.length < 6) {
-        showAlert.errorToast(
-          "La nueva contraseña debe tener al menos 6 caracteres",
-        );
+      const { isValid, errors } = validatePasswordSecurity(
+        formData.newPassword,
+      );
+      if (!isValid) {
+        showAlert.errorToast(`Contraseña insegura: ${errors[0]}`);
         return;
       }
+
       if (formData.newPassword !== formData.confirmPassword) {
         showAlert.errorToast("Las contraseñas no coinciden");
         return;
@@ -379,7 +375,7 @@ const UserProfileForm: React.FC<{
                 <input
                   type="password"
                   name="newPassword"
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Ingresa nueva contraseña"
                   value={formData?.newPassword || ""}
                   onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2.5 rounded-2xl border bg-gray-50 dark:bg-slate-900 border-gray-200 dark:border-slate-700 text-sm font-medium text-gray-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500 focus:outline-none transition-all"
@@ -404,6 +400,57 @@ const UserProfileForm: React.FC<{
               </div>
             </div>
           </div>
+
+          {/* Requisitos visuales dinámicos de seguridad */}
+          {(formData.newPassword || "").length > 0 && (
+            <div className="p-3.5 bg-gray-50 dark:bg-slate-900/60 rounded-2xl border border-gray-200/80 dark:border-slate-700/80 space-y-1.5 text-xs mt-3">
+              <p className="font-semibold text-gray-600 dark:text-slate-300 mb-1">
+                La contraseña debe cumplir con:
+              </p>
+              {[
+                {
+                  label: "Mínimo 8 caracteres",
+                  met: (formData.newPassword || "").length >= 8,
+                },
+                {
+                  label: "Una letra mayúscula (A-Z)",
+                  met: /[A-Z]/.test(formData.newPassword || ""),
+                },
+                {
+                  label: "Una letra minúscula (a-z)",
+                  met: /[a-z]/.test(formData.newPassword || ""),
+                },
+                {
+                  label: "Un número (0-9)",
+                  met: /[0-9]/.test(formData.newPassword || ""),
+                },
+                {
+                  label: "Un carácter especial (@, #, $, %)",
+                  met: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(
+                    formData.newPassword || "",
+                  ),
+                },
+              ].map((req, idx) => (
+                <div
+                  key={idx}
+                  className={`flex items-center gap-2 transition-colors ${
+                    req.met
+                      ? "text-emerald-600 dark:text-emerald-400 font-medium"
+                      : "text-gray-400 dark:text-slate-500"
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      req.met
+                        ? "bg-emerald-500"
+                        : "bg-gray-300 dark:bg-slate-600"
+                    }`}
+                  />
+                  <span>{req.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* BOTÓN GUARDAR */}

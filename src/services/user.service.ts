@@ -20,6 +20,7 @@ import { db } from "@/lib/firebase";
 import { UserDocument, UserAccount, UserFormData } from "@/types/user";
 import { logAuditEvent } from "@/services/logger.service";
 import { UserContext } from "@/types/auditLog";
+import { validatePasswordSecurity } from "@/lib/validators";
 
 const USERS_COLLECTION = "users";
 
@@ -60,8 +61,14 @@ export const createUserWithAuth = async (
   userData: UserFormData,
   currentUser?: UserContext,
 ): Promise<void> => {
-  if (!userData.password || userData.password.length < 6) {
-    throw new Error("La contraseña debe tener al menos 6 caracteres.");
+  // 1. Validar presencia y seguridad de la contraseña
+  if (!userData.password) {
+    throw new Error("La contraseña es obligatoria.");
+  }
+
+  const { isValid, errors } = validatePasswordSecurity(userData.password);
+  if (!isValid) {
+    throw new Error(`Contraseña insegura: ${errors.join(", ")}`);
   }
 
   const primaryApp = getApp();
@@ -79,7 +86,7 @@ export const createUserWithAuth = async (
     const userCredential = await createUserWithEmailAndPassword(
       secondaryAuth,
       userData.email,
-      userData.password,
+      userData.password, // TS reconoció que no es undefined aquí
     );
 
     const newUid = userCredential.user.uid;

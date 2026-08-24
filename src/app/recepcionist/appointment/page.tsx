@@ -8,15 +8,14 @@ import {
   Plus,
   Calendar as CalendarIcon,
   Clock,
-  Loader2,
   CheckCircle2,
   Clock3,
   XCircle,
-  CalendarDays,
   Pencil,
   Trash2,
   Mail,
   List,
+  CalendarSync, // 🟢 Importamos el icono de reprogramar
 } from "lucide-react";
 
 import { ActionButton } from "@/components/ui/ActionButton";
@@ -28,6 +27,7 @@ import { showAlert } from "@/lib/sweetalert";
 import { useAuth } from "@/lib/AuthContext";
 import { AppointmentService } from "@/services/appointment.service";
 import { PatientService } from "@/services/patient.service";
+import { getCategories } from "@/services/category.service"; // 🟢 Asegúrate de importar tu servicio
 import { Patient } from "@/types/patient";
 import {
   Appointment,
@@ -35,21 +35,6 @@ import {
   AppointmentStatus,
 } from "@/types/appointment";
 import { formatters } from "@/lib/validators";
-
-const THERAPY_OPTIONS: TherapyType[] = [
-  "Terapia Individual",
-  "Terapia de Pareja",
-  "Terapia Familiar",
-  "Terapia en Línea",
-  "Orientación Vocacional",
-  "Terapia de Grupo",
-];
-
-const MULTI_PATIENT_THERAPIES: TherapyType[] = [
-  "Terapia de Pareja",
-  "Terapia Familiar",
-  "Terapia de Grupo",
-];
 
 const STATUS_OPTIONS: AppointmentStatus[] = [
   "Programada",
@@ -61,6 +46,7 @@ export default function AppointmentsPage() {
   const { userData } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patientsList, setPatientsList] = useState<Patient[]>([]);
+  const [therapyOptions, setTherapyOptions] = useState<string[]>([]); // 🟢 Estado para terapias de BDD
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("Todos");
   const [isPageLoading, setIsPageLoading] = useState(true);
@@ -79,14 +65,13 @@ export default function AppointmentsPage() {
 
   const todayDateStr = new Date().toISOString().split("T")[0];
   const [formData, setFormData] = useState({
-    therapyType: "Terapia Individual" as TherapyType,
+    therapyType: "" as TherapyType,
     date: todayDateStr,
     time: "09:00",
     status: "Programada" as AppointmentStatus,
     notes: "",
   });
 
-  // Objeto con la información del usuario actual para la bitácora
   const currentUser = {
     uid: userData?.uid || "",
     name: userData?.name || "Usuario",
@@ -94,15 +79,33 @@ export default function AppointmentsPage() {
     role: userData?.role || "psicologo",
   };
 
+  // 🟢 Carga de datos desde la BDD (incluye tipos de terapia)
   const fetchData = useCallback(async () => {
     setIsPageLoading(true);
     try {
-      const [patientsData, appointmentsData] = await Promise.all([
-        PatientService.getAll(),
-        AppointmentService.getAll(),
-      ]);
+      const [patientsData, appointmentsData, categoriesData] =
+        await Promise.all([
+          PatientService.getAll(),
+          AppointmentService.getAll(),
+          getCategories(), // 🟢 Llamada a tu servicio importado
+        ]);
+
       setPatientsList(patientsData);
       setAppointments(appointmentsData);
+
+      // 🟢 Filtrar categorías activas y extraer los nombres
+      const activeCategories = categoriesData
+        .filter((cat) => cat.status === "active")
+        .map((cat) => cat.name);
+
+      setTherapyOptions(activeCategories);
+
+      if (activeCategories.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          therapyType: prev.therapyType || (activeCategories[0] as TherapyType),
+        }));
+      }
     } catch (error) {
       showAlert.errorToast("Error al obtener datos desde la API.");
     } finally {
@@ -200,7 +203,6 @@ export default function AppointmentsPage() {
 
     try {
       if (selectedAppointment) {
-        // 🟢 Se pasa `currentUser` como 3er parámetro
         await AppointmentService.update(
           selectedAppointment.id,
           dataToSave,
@@ -208,7 +210,6 @@ export default function AppointmentsPage() {
         );
         showAlert.successToast("Cita actualizada correctamente.");
       } else {
-        // 🟢 Se pasa `currentUser` como 2do parámetro
         await AppointmentService.create(dataToSave, currentUser);
         showAlert.successToast("Cita agendada correctamente.");
       }
@@ -228,7 +229,6 @@ export default function AppointmentsPage() {
     );
     if (confirmed) {
       try {
-        // 🟢 Se pasa `currentUser` como 2do parámetro
         await AppointmentService.cancel(id, currentUser);
         showAlert.successToast("La cita fue cancelada.");
         fetchData();
@@ -242,7 +242,10 @@ export default function AppointmentsPage() {
     setSelectedAppointment(null);
     setSelectedPatientIds([patientsList[0]?.id || ""]);
     setFormData({
-      therapyType: "Terapia Individual",
+      // 🟢 Agregado el as TherapyType al inicio
+      therapyType:
+        (therapyOptions[0] as TherapyType) ||
+        ("Terapia Individual" as TherapyType),
       date: initialDate || todayDateStr,
       time: "09:00",
       status: "Programada",
@@ -264,6 +267,20 @@ export default function AppointmentsPage() {
       time: appointment.time,
       status: appointment.status,
       notes: appointment.notes || "",
+    });
+    setIsFormModalOpen(true);
+  };
+
+  // 🟢 Lógica para Reprogramar Citas (Abre el formulario creando un nuevo registro con los datos base)
+  const handleOpenRescheduleModal = (appointment: Appointment) => {
+    setSelectedAppointment(null); // Null para que cree un registro nuevo
+    setSelectedPatientIds(appointment.patientIds || []);
+    setFormData({
+      therapyType: appointment.therapyType,
+      date: todayDateStr,
+      time: appointment.time,
+      status: "Programada",
+      notes: `Reprogramada de la cita previa del ${appointment.date}. ${appointment.notes || ""}`,
     });
     setIsFormModalOpen(true);
   };
@@ -370,12 +387,22 @@ export default function AppointmentsPage() {
                 setIsViewModalOpen(true);
               }}
             />
-            <ActionButton
-              icon={<Pencil className="w-4 h-4" />}
-              title="Editar Cita"
-              variant="warning"
-              onClick={() => handleOpenEditModal(app)}
-            />
+            {/* 🟢 Si está cancelada, permite reprogramar con un clic */}
+            {isCancelled ? (
+              <ActionButton
+                icon={<CalendarSync className="w-4 h-4" />}
+                title="Reprogramar Cita"
+                variant="warning"
+                onClick={() => handleOpenRescheduleModal(app)}
+              />
+            ) : (
+              <ActionButton
+                icon={<Pencil className="w-4 h-4" />}
+                title="Editar Cita"
+                variant="warning"
+                onClick={() => handleOpenEditModal(app)}
+              />
+            )}
             <ActionButton
               icon={<Trash2 className="w-4 h-4" />}
               title="Cancelar Cita"
@@ -389,7 +416,7 @@ export default function AppointmentsPage() {
     },
   ];
 
-  // Skeleton para el modo Tabla
+  // Resto de esqueletos de carga
   const TableSkeleton = () => (
     <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-3xl p-6 space-y-4 animate-pulse">
       <div className="h-6 bg-gray-200 dark:bg-slate-700 rounded-lg w-1/4 mb-6"></div>
@@ -402,7 +429,6 @@ export default function AppointmentsPage() {
     </div>
   );
 
-  // Skeleton para el modo Calendario
   const CalendarSkeleton = () => (
     <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-3xl p-6 animate-pulse space-y-4">
       <div className="flex justify-between items-center mb-6">
@@ -422,7 +448,6 @@ export default function AppointmentsPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif] px-1 sm:px-0">
-      {/* Header General */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 rounded-2xl">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
@@ -434,7 +459,6 @@ export default function AppointmentsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* Switch Tab (Tabla vs Calendario) */}
           <div className="flex items-center p-1 bg-gray-100 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700">
             <button
               onClick={() => setViewMode("table")}
@@ -496,7 +520,6 @@ export default function AppointmentsPage() {
         </div>
       </div>
 
-      {/* Renderizado Condicional de Componentes */}
       {isPageLoading ? (
         viewMode === "table" ? (
           <TableSkeleton />
@@ -504,7 +527,6 @@ export default function AppointmentsPage() {
           <CalendarSkeleton />
         )
       ) : viewMode === "table" ? (
-        /* COMPONENTE 1: TABLA */
         <Table
           columns={appointmentColumns}
           data={filteredAppointments}
@@ -512,7 +534,6 @@ export default function AppointmentsPage() {
           itemsPerPage={6}
         />
       ) : (
-        /* COMPONENTE 2: CALENDARIO */
         <AppointmentCalendar
           appointments={appointments}
           onAddClick={handleOpenAddModal}
@@ -526,7 +547,7 @@ export default function AppointmentsPage() {
         />
       )}
 
-      {/* Modal para Agendar / Editar Cita */}
+      {/* Modal para Agendar / Editar / Reprogramar Cita */}
       <Modal
         isOpen={isFormModalOpen}
         onClose={() => setIsFormModalOpen(false)}
@@ -536,7 +557,7 @@ export default function AppointmentsPage() {
         isLoading={isLoading}
       >
         <div className="space-y-4">
-          {/* Tipo de Terapia */}
+          {/* 🟢 Opciones tomadas dinámicamente desde BDD */}
           <div>
             <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase mb-1">
               Tipo Terapia
@@ -549,50 +570,28 @@ export default function AppointmentsPage() {
                   ...formData,
                   therapyType: newTherapy,
                 });
-
-                const isMulti = [
-                  "Terapia de Pareja",
-                  "Terapia Familiar",
-                  "Terapia Grupal",
-                ].includes(newTherapy);
-                if (!isMulti && selectedPatientIds.length > 1) {
-                  setSelectedPatientIds([selectedPatientIds[0]]);
-                }
               }}
-              options={THERAPY_OPTIONS.map((t: string) => ({
+              options={therapyOptions.map((t: string) => ({
                 label: t,
                 value: t,
               }))}
             />
           </div>
 
-          {/* SECCIÓN DE PACIENTES DINÁMICA */}
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase">
-                {[
-                  "Terapia de Pareja",
-                  "Terapia Familiar",
-                  "Terapia Grupal",
-                ].includes(formData.therapyType)
-                  ? "Pacientes Participantes"
-                  : "Paciente"}
+                Paciente(s)
               </label>
-              {[
-                "Terapia de Pareja",
-                "Terapia Familiar",
-                "Terapia Grupal",
-              ].includes(formData.therapyType) && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSelectedPatientIds([...selectedPatientIds, ""])
-                  }
-                  className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Agregar Paciente
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedPatientIds([...selectedPatientIds, ""])
+                }
+                className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" /> Agregar Paciente
+              </button>
             </div>
 
             <div className="space-y-2">
@@ -636,7 +635,6 @@ export default function AppointmentsPage() {
             </div>
           </div>
 
-          {/* Fecha y Hora */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase mb-1">
@@ -669,7 +667,6 @@ export default function AppointmentsPage() {
             </div>
           </div>
 
-          {/* Estado */}
           <div>
             <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase mb-1">
               Estado
