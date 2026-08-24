@@ -33,6 +33,7 @@ export const Select: React.FC<SelectProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [dropUp, setDropUp] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const stringValue = String(value ?? "");
@@ -40,7 +41,19 @@ export const Select: React.FC<SelectProps> = ({
     (opt) => String(opt.value) === stringValue,
   );
 
-  // Cerrar al hacer clic fuera del componente
+  const toggleOpen = () => {
+    if (disabled) return;
+
+    if (!isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+
+      // Abre hacia arriba SOLO si hay menos de 180px disponibles en la pantalla
+      setDropUp(spaceBelow < 180);
+    }
+    setIsOpen(!isOpen);
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -72,9 +85,8 @@ export const Select: React.FC<SelectProps> = ({
         <label className="block font-bold text-gray-800 text-sm">{label}</label>
       )}
 
-      {/* Input principal del Select con altura fija h-[42px] */}
       <div
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={toggleOpen}
         className={`w-full h-[42px] px-4 rounded-2xl text-sm border bg-gray-50 border-gray-200 text-gray-900 flex items-center justify-between transition-all duration-200 cursor-pointer ${
           error ? "border-rose-300 bg-rose-50/50" : "hover:border-blue-400"
         } ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${className}`}
@@ -92,9 +104,12 @@ export const Select: React.FC<SelectProps> = ({
         />
       </div>
 
-      {/* Desplegable emergente */}
       {isOpen && !disabled && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden p-2 space-y-1">
+        <div
+          className={`absolute z-[60] left-0 right-0 bg-white border border-gray-200 rounded-2xl shadow-xl p-2 space-y-1 ${
+            dropUp ? "bottom-full mb-1" : "top-full mt-1"
+          }`}
+        >
           {searchable && (
             <div className="relative">
               <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />

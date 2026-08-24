@@ -31,6 +31,7 @@ import {
 } from "@/types/therapyCategory";
 import { useAuth } from "@/lib/AuthContext";
 import { formatters } from "@/lib/validators";
+import { showAlert } from "@/lib/sweetalert";
 
 // Componentes UI
 import { Table, Column } from "@/components/ui/Table";
@@ -144,8 +145,10 @@ export default function TherapyCategoriesPage() {
     try {
       if (selectedCategory) {
         await updateCategory(selectedCategory.id, formData, currentUser);
+        showAlert.successToast("Categoría actualizada correctamente");
       } else {
         await createCategory(formData, currentUser);
+        showAlert.successToast("Categoría creada correctamente");
       }
       await fetchCategories();
       setIsFormModalOpen(false);
@@ -163,6 +166,9 @@ export default function TherapyCategoriesPage() {
       const newStatus =
         selectedCategory.status === "active" ? "inactive" : "active";
       await toggleCategoryStatus(selectedCategory.id, newStatus, currentUser);
+      showAlert.successToast(
+        `Categoría ${newStatus === "active" ? "activada" : "inactivada"} correctamente`,
+      );
       await fetchCategories();
       setIsStatusModalOpen(false);
     } catch (error) {
@@ -295,9 +301,10 @@ export default function TherapyCategoriesPage() {
       ),
     },
   ];
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',sans-serif] px-1 sm:px-0">
-      {/* 🟢 HEADER Y FILTROS */}
+      {/* HEADER Y FILTROS */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
@@ -308,7 +315,6 @@ export default function TherapyCategoriesPage() {
           </p>
         </div>
 
-        {/* Acciones & Filtros: Optimizado para iPads y Pantallas Táctiles */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-wrap lg:flex-nowrap items-center gap-2.5 w-full md:w-auto">
           {/* Filtro por Estado */}
           <div className="w-full sm:w-auto md:w-36">
@@ -404,7 +410,7 @@ export default function TherapyCategoriesPage() {
         </div>
       </div>
 
-      {/* 💀 SKELETON DE CARGA / TABLA REAL */}
+      {/* SKELETON DE CARGA / TABLA REAL */}
       {isPageLoading ? (
         <div className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-3xl p-6 shadow-xs animate-pulse space-y-4">
           <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-slate-800">
@@ -438,7 +444,7 @@ export default function TherapyCategoriesPage() {
         </div>
       )}
 
-      {/* 📝 MODAL CREAR / EDITAR */}
+      {/* MODAL CREAR / EDITAR */}
       <ModalSheet
         isOpen={isFormModalOpen}
         onClose={() => setIsFormModalOpen(false)}
@@ -448,7 +454,7 @@ export default function TherapyCategoriesPage() {
         cancelText="Cancelar"
         isLoading={isSubmitLoading}
       >
-        <div className="space-y-4 pt-1">
+        <div className="space-y-4 pt-1 overflow-visible">
           <div>
             <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
               Nombre de la Categoría
@@ -468,7 +474,7 @@ export default function TherapyCategoriesPage() {
             />
           </div>
 
-          <div>
+          <div className="relative z-20">
             <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
               Estado Inicial
             </label>
@@ -487,7 +493,7 @@ export default function TherapyCategoriesPage() {
         </div>
       </ModalSheet>
 
-      {/* 👁️ MODAL VER (Diseño en Cards) */}
+      {/* MODAL VER */}
       <ModalSheet
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
@@ -566,7 +572,7 @@ export default function TherapyCategoriesPage() {
         )}
       </ModalSheet>
 
-      {/* ⚠️ MODAL CAMBIO DE ESTADO */}
+      {/* MODAL CAMBIO DE ESTADO */}
       <ModalSheet
         isOpen={isStatusModalOpen}
         onClose={() => setIsStatusModalOpen(false)}

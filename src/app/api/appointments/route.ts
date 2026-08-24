@@ -13,7 +13,7 @@ import {
 export async function GET() {
   try {
     const appointmentsRef = collection(db, "appointments");
-    const q = query(appointmentsRef, orderBy("date", "asc"));
+    const q = query(appointmentsRef, orderBy("date", "desc"));
     const querySnapshot = await getDocs(q);
 
     const appointments = querySnapshot.docs.map((doc) => ({

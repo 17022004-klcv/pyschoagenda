@@ -25,22 +25,17 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
   if (!isOpen) return null;
 
   return (
-    /* Fondo Backdrop: Cierra el modal al hacer clic afuera si no está cargando */
     <div
       onClick={() => !isLoading && onClose()}
       className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display',sans-serif]"
     >
-      {/* Contenido del Modal: Detiene la propagación del clic */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200"
+        className="bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200 relative"
       >
-        <form
-          onSubmit={onSubmit}
-          className="flex flex-col h-full overflow-hidden"
-        >
-          {/* Header iOS Style */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/50 shrink-0">
+        <form onSubmit={onSubmit} className="flex flex-col h-full max-h-[90vh]">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/50 shrink-0 rounded-t-3xl">
             <button
               type="button"
               onClick={onClose}
@@ -64,8 +59,10 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
             </button>
           </div>
 
-          {/* Cuerpo con Scroll */}
-          <div className="p-6 overflow-y-auto space-y-4">{children}</div>
+          {/* Cuerpo normal con espaciado natural (p-6) */}
+          <div className="p-6 overflow-y-auto space-y-4 rounded-b-3xl">
+            {children}
+          </div>
         </form>
       </div>
     </div>
